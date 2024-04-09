@@ -40,19 +40,46 @@ class DMD:
         Calculate the x coordinate depending on mirror properties
         '''
         self.range_check(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
-        gamma = (2 * np.pi * tilt_angle) / 360
+        gamma = (2 * np.pi * tilt_angle) / 360 # in radiants
         cos = np.cos(gamma)
         sin = np.sin(gamma)
         # matrix_product = s * (0.5 * (1 - cos) + cos) + t * (0.5 * (1-cos) - 1/np.sqrt(2) * sin)
         matrix_product = s * (0.5 * (1 - cos) + cos) + t * (0.5 * (1-cos))
         return matrix_product + (self.mirror_width + self.gap_x) * mirror_nr_x - self.dmd_width / 2
+    
+    def get_y(self, mirror_nr_x, mirror_nr_y, tilt_angle, s, t):
+        '''
+        Calculate the y coordinate depending on mirror properties
+        '''
+        self.range_check(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
+        gamma = (2 * np.pi * tilt_angle) / 360 # in radiants
+        cos = np.cos(gamma)
+        sin = np.sin(gamma)
+        matrix_product = s * (0.5 * (1 - cos)) + t * (0.5 * (1-cos) + cos)
+        return matrix_product + (self.mirror_width + self.gap_y) * mirror_nr_y - self.dmd_height / 2
+    
+    def get_z(self, mirror_nr_x, mirror_nr_y, tilt_angle, s, t):
+        '''
+        Calculate the z coordinate depending on mirror properties
+        '''
+        self.range_check(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
+        gamma = (2 * np.pi * tilt_angle) / 360 # in radiants
+        cos = np.cos(gamma)
+        sin = np.sin(gamma)
+        matrix_product = 1/np.sqrt(2) * (- s * sin + t * sin)
+        return matrix_product
 
+def main():
+    nrY = 1080
+    nrX = 1920
+    latticeConstant = 7.56
+    fillFactor = 0.92
+    mirrorSize = np.sqrt(latticeConstant*latticeConstant*fillFactor)
+    gap = latticeConstant-mirrorSize
+    dmd = DMD(nrX, nrY, mirrorSize, mirrorSize, gap, gap)
+    print(dmd.get_x(0, 0, 40, 2, 2))
+    print(dmd.get_y(0, 0, 40, 2, 2))
+    print(dmd.get_z(0, 0, 40, 2, 2))
 
-nrY = 1080
-nrX = 1920
-latticeConstant = 7.56
-fillFactor = 0.92
-mirrorSize = np.sqrt(latticeConstant*latticeConstant*fillFactor)
-gap = latticeConstant-mirrorSize
-dmd = DMD(nrX, nrY, mirrorSize, mirrorSize, gap, gap)
-print(dmd.get_x(0, 0, 40, 2, 2))
+if __name__ == "__main__":
+    main()
