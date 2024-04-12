@@ -85,9 +85,6 @@ class DMD:
         params_per_mirror = 4
         width = int(self.mirror_nr_x * (self.mirror_width + self.gap_x))
         height = int(self.mirror_nr_y * (self.mirror_height + self.gap_y))
-        print(width, height)
-        print(self.dmd_width, self.dmd_height)
-        print(self.get_coordinates(0, 0, 12, 3, 4))
         surface = np.zeros((width, height), np.double)
         x_values = np.array([])
         y_values = np.array([])
