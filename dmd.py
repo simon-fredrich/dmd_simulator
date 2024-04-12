@@ -85,7 +85,7 @@ class DMD:
         params_per_mirror = 4
         width = int(self.mirror_nr_x * (self.mirror_width + self.gap_x))
         height = int(self.mirror_nr_y * (self.mirror_height + self.gap_y))
-        surface = np.zeros((width, height), np.double)
+        surface = np.zeros((width, height), np.double) # currently not needed
         x_values = np.array([])
         y_values = np.array([])
         z_values = np.array([])
@@ -117,7 +117,7 @@ def main():
     mirror_height = 5
     gap = 0.5
     dmd = DMD(mirror_nr_x, mirror_nr_y, mirror_width, mirror_height, gap, gap)
-    dmd.show_surface(-45)
+    dmd.show_surface(0)
 
 if __name__ == "__main__":
     main()
