@@ -82,7 +82,7 @@ class DMD:
         Display surface of the dmd where all mirrors are in the 
         same state.
         '''
-        vals_per_mirror = 4
+        params_per_mirror = 4
         width = int(self.mirror_nr_x * (self.mirror_width + self.gap_x))
         height = int(self.mirror_nr_y * (self.mirror_height + self.gap_y))
         print(width, height)
@@ -95,10 +95,10 @@ class DMD:
 
         for m_x in np.arange(self.mirror_nr_x):
             for m_y in np.arange(self.mirror_nr_y):
-                for s in np.arange(vals_per_mirror):
-                    s_i = self.mirror_width / vals_per_mirror * s
-                    for t in np.arange(vals_per_mirror):
-                        t_i = self.mirror_height / vals_per_mirror * t
+                for s in np.arange(params_per_mirror):
+                    s_i = self.mirror_width / params_per_mirror * s
+                    for t in np.arange(params_per_mirror):
+                        t_i = self.mirror_height / params_per_mirror * t
                         x = self.get_x(m_x, m_y, tilt_angle, s_i, t_i)
                         x_values = np.append(x_values, x)
                         y = self.get_y(m_x, m_y, tilt_angle, s_i, t_i)
