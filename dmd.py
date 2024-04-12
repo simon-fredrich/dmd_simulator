@@ -1,7 +1,5 @@
 import numpy as np
-from mirror import Mirror
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 class DMD:
     '''
@@ -57,6 +55,7 @@ class DMD:
         gamma = (2 * np.pi * tilt_angle) / 360 # in radiants
         cos = np.cos(gamma)
         sin = np.sin(gamma)
+        # matrix_product = s * (0.5 * (1 - cos) + 1/np.sqrt(2) * sin) + t * (0.5 * (1 - cos) + cos)
         matrix_product = s * (0.5 * (1 - cos)) + t * (0.5 * (1-cos) + cos)
         return matrix_product + (self.mirror_width + self.gap_y) * mirror_nr_y - self.dmd_height / 2
     
@@ -68,6 +67,7 @@ class DMD:
         gamma = (2 * np.pi * tilt_angle) / 360 # in radiants
         cos = np.cos(gamma)
         sin = np.sin(gamma)
+        # matrix_product = s * (0.5 * (1 - cos) - 1/np.sqrt(2) * sin) + t * (0.5 * (1 - cos) + 1/np.sqrt(2) * sin)
         matrix_product = 1/np.sqrt(2) * (- s * sin + t * sin)
         return matrix_product
     
