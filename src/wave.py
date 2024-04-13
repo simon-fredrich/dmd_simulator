@@ -17,7 +17,7 @@ class Plane:
         '''
         return self.E_0 * np.sin(self.k[0]*position[0] + self.k[1]*position[1])
     
-    def show_field_2D(self):
+    def show_field_2d(self):
         lower_bound = -10
         upper_bound = 10
         p1 = (-10, -10, -1)
@@ -28,12 +28,12 @@ class Plane:
         field = df.Field(mesh, nvdim=1, value=self.get_field_at_xy, norm=10)
 
         try:
-            field.orientation.sel(z=0.5).mpl(figsize=(15, 12))
+            field.orientation.sel(z=0.5).mpl()
         except RuntimeError as e:
             print("Exception raised:", e)
         plt.show()
 
-    def show_field_3D(self):
+    def show_field_3d(self):
         # create the figure
         fig = plt.figure()
 
@@ -52,7 +52,7 @@ class Plane:
 def main():
     my_plane = Plane(1, 1, 200e-9, 55)
 
-    my_plane.show_field_3D()
+    my_plane.show_field_2d()
 
 
 if __name__ == "__main__":
