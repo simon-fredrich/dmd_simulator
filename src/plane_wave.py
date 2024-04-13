@@ -31,7 +31,7 @@ class Plane_Wave:
         xs, ys = np.meshgrid(x, y, sparse=True)
         zs = np.zeros_like(xs)
         E = self.get_field_at_pos(xs, ys, zs)
-        h = plt.contourf(x, y, E)
+        plt.contourf(x, y, E)
         plt.axis('scaled')
         plt.colorbar()
         plt.xlabel("x")
@@ -48,7 +48,7 @@ class Plane_Wave:
         xs, zs = np.meshgrid(x, z, sparse=True)
         ys = np.zeros_like(xs)
         E = self.get_field_at_pos(xs, ys, zs)
-        h = plt.contourf(x, z, E)
+        plt.contourf(x, z, E)
         plt.axis('scaled')
         plt.colorbar()
         plt.xlabel("x")
@@ -65,7 +65,7 @@ class Plane_Wave:
         ys, zs = np.meshgrid(y, z, sparse=True)
         xs = np.zeros_like(ys)
         E = self.get_field_at_pos(xs, ys, zs)
-        h = plt.contourf(y, z, E)
+        plt.contourf(y, z, E)
         plt.axis('scaled')
         plt.colorbar()
         plt.xlabel("y")
@@ -75,7 +75,7 @@ class Plane_Wave:
 
 def main():
     my_plane = Plane_Wave(1, 1, 30, 10)
-    my_plane.display_field_yz()
+    my_plane.display_field_xy()
 
 
 if __name__ == "__main__":
