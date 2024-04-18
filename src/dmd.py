@@ -30,42 +30,53 @@ class DMD:
             print("mirror_y has to be between 0 and {}".format(self.mirror_nr_y))
         if (np.abs(tilt_angle) > 90):
             print("Tilt angle has to be inside [-90, 90]")
-        if (s < 0 or s > self.mirror_width):
-            print("s has to be inside [0, {}]".format(self.mirror_width))
-        if (t < 0 or t > self.mirror_width):
-            print("t has to be inside [0, {}]".format(self.mirror_height))
+        for s_i in s:
+            if (s_i < 0 or s_i > self.mirror_width):
+                print("s has to be inside [0, {}]".format(self.mirror_width))
+        for t_i in t:
+            if (t_i < 0 or t_i > self.mirror_width):
+                print("t has to be inside [0, {}]".format(self.mirror_height))
 
     def get_x(self, mirror_nr_x, mirror_nr_y, tilt_angle, s, t):
         '''
-        Calculate the x coordinate depending on mirror properties
+        Calculate the x coordinates depending on mirror properties
+
+        Returns: np.meshgrid
         '''
         self.range_check(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
+        ss, tt = np.meshgrid(s, t)
         gamma = (2 * np.pi * tilt_angle) / 360 # in radiants
         cos = np.cos(gamma)
         sin = np.sin(gamma)
-        matrix_product = s * (0.5 * (1 - cos) + cos) + t * (0.5 * (1-cos))
+        matrix_product = ss * (0.5 * (1 - cos) + cos) + tt * (0.5 * (1-cos))
         return matrix_product + (self.mirror_width + self.gap_x) * mirror_nr_x - self.dmd_width / 2
     
     def get_y(self, mirror_nr_x, mirror_nr_y, tilt_angle, s, t):
         '''
-        Calculate the y coordinate depending on mirror properties
+        Calculate the y coordinates depending on mirror properties
+
+        Returns: np.meshgrid
         '''
         self.range_check(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
+        ss, tt = np.meshgrid(s, t)
         gamma = (2 * np.pi * tilt_angle) / 360 # in radiants
         cos = np.cos(gamma)
         sin = np.sin(gamma)
-        matrix_product = s * (0.5 * (1 - cos)) + t * (0.5 * (1-cos) + cos)
+        matrix_product = ss * (0.5 * (1 - cos)) + tt * (0.5 * (1-cos) + cos)
         return matrix_product + (self.mirror_width + self.gap_y) * mirror_nr_y - self.dmd_height / 2
     
     def get_z(self, mirror_nr_x, mirror_nr_y, tilt_angle, s, t):
         '''
-        Calculate the z coordinate depending on mirror properties
+        Calculate the z coordinates depending on mirror properties
+
+        Returns: np.meshgrid
         '''
         self.range_check(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
+        ss, tt = np.meshgrid(s, t)
         gamma = (2 * np.pi * tilt_angle) / 360 # in radiants
         cos = np.cos(gamma)
         sin = np.sin(gamma)
-        matrix_product = 1/np.sqrt(2) * (- s * sin + t * sin)
+        matrix_product = 1/np.sqrt(2) * (- ss * sin + tt * sin)
         return matrix_product
     
     def get_coordinates(self, mirror_nr_x, mirror_nr_y, tilt_angle, s, t):
@@ -87,34 +98,41 @@ class DMD:
         y_values = np.array([])
         z_values = np.array([])
 
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
         for m_x in np.arange(self.mirror_nr_x):
             for m_y in np.arange(self.mirror_nr_y):
-                for s in np.arange(params_per_mirror):
-                    s_i = self.mirror_width / params_per_mirror * s
-                    for t in np.arange(params_per_mirror):
-                        t_i = self.mirror_height / params_per_mirror * t
-                        x = self.get_x(m_x, m_y, tilt_angle, s_i, t_i)
-                        x_values = np.append(x_values, x)
-                        y = self.get_y(m_x, m_y, tilt_angle, s_i, t_i)
-                        y_values = np.append(y_values, y)
-                        z = self.get_z(m_x, m_y, tilt_angle, s_i, t_i)
-                        z_values = np.append(z_values, z)
-                        # print(x, y, z)
+                s = np.linspace(0, params_per_mirror, 10)
+                t = np.linspace(0, params_per_mirror, 10)
+                
+                xx = self.get_x(m_x, m_y, tilt_angle, s, t)
+                yy = self.get_y(m_x, m_y, tilt_angle, s, t)
+                zz = self.get_z(m_x, m_y, tilt_angle, s, t)
 
-        plt.scatter(x_values, y_values, c=z_values, cmap='viridis', s=20)
-        plt.colorbar(label='Z values')
+                ax.plot_surface(xx, yy, zz, alpha=0.5)
+
+                # for s in np.arange(params_per_mirror):
+                #     s_i = self.mirror_width / params_per_mirror * s
+                #     for t in np.arange(params_per_mirror):
+                #         t_i = self.mirror_height / params_per_mirror * t
+                #         x = self.get_x(m_x, m_y, tilt_angle, s_i, t_i)
+                #         x_values = np.append(x_values, x)
+                #         y = self.get_y(m_x, m_y, tilt_angle, s_i, t_i)
+                #         y_values = np.append(y_values, y)
+                #         z = self.get_z(m_x, m_y, tilt_angle, s_i, t_i)
+                #         z_values = np.append(z_values, z)
+
         plt.show()
-
-
 
 def main():
     mirror_nr_x = 5
-    mirror_nr_y = 6
+    mirror_nr_y = 5
     mirror_width = 5
     mirror_height = 5
     gap = 0.5
     dmd = DMD(mirror_nr_x, mirror_nr_y, mirror_width, mirror_height, gap, gap)
-    dmd.show_surface(0)
+    dmd.show_surface(12)
 
 if __name__ == "__main__":
     main()
