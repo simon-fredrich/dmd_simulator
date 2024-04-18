@@ -112,17 +112,6 @@ class DMD:
 
                 ax.plot_surface(xx, yy, zz, alpha=0.5)
 
-                # for s in np.arange(params_per_mirror):
-                #     s_i = self.mirror_width / params_per_mirror * s
-                #     for t in np.arange(params_per_mirror):
-                #         t_i = self.mirror_height / params_per_mirror * t
-                #         x = self.get_x(m_x, m_y, tilt_angle, s_i, t_i)
-                #         x_values = np.append(x_values, x)
-                #         y = self.get_y(m_x, m_y, tilt_angle, s_i, t_i)
-                #         y_values = np.append(y_values, y)
-                #         z = self.get_z(m_x, m_y, tilt_angle, s_i, t_i)
-                #         z_values = np.append(z_values, z)
-
         plt.show()
 
 def main():
