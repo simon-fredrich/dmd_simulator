@@ -80,38 +80,42 @@ class DMD:
         return matrix_product
     
     def get_coordinates(self, mirror_nr_x, mirror_nr_y, tilt_angle, s, t):
-        x = self.get_x(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
-        y = self.get_y(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
-        z = self.get_z(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
-        return np.array([x, y, z])
+        xx = self.get_x(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
+        yy = self.get_y(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
+        zz = self.get_z(mirror_nr_x, mirror_nr_y, tilt_angle, s, t)
+        return np.array([xx, yy, zz])
     
     def show_surface(self, tilt_angle):
         '''
         Display surface of the dmd where all mirrors are in the 
         same state.
         '''
-        params_per_mirror = 4
+
+        params_per_mirror = 4 # s & t number per mirror (resolution)
         width = int(self.mirror_nr_x * (self.mirror_width + self.gap_x))
         height = int(self.mirror_nr_y * (self.mirror_height + self.gap_y))
-        surface = np.zeros((width, height), np.double) # currently not needed
-        x_values = np.array([])
-        y_values = np.array([])
-        z_values = np.array([])
+        box = [-10, 10]
 
+        # prerequisites for 3d-plot
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
+        # iterate over mirrors
         for m_x in np.arange(self.mirror_nr_x):
             for m_y in np.arange(self.mirror_nr_y):
-                s = np.linspace(0, params_per_mirror, 10)
-                t = np.linspace(0, params_per_mirror, 10)
+                s = np.linspace(0, params_per_mirror, box[1])
+                t = np.linspace(0, params_per_mirror, box[1])
                 
+                # get coordinate-meshgrids for displaying mirror plane
                 xx = self.get_x(m_x, m_y, tilt_angle, s, t)
                 yy = self.get_y(m_x, m_y, tilt_angle, s, t)
                 zz = self.get_z(m_x, m_y, tilt_angle, s, t)
 
+                # add mirror plane to 3d-plot
                 ax.plot_surface(xx, yy, zz, alpha=0.5)
 
+        # show plot
+        ax.set_zlim(box[0], box[1])
         plt.show()
 
 def main():
@@ -121,7 +125,7 @@ def main():
     mirror_height = 5
     gap = 0.5
     dmd = DMD(mirror_nr_x, mirror_nr_y, mirror_width, mirror_height, gap, gap)
-    dmd.show_surface(12)
+    dmd.show_surface(45)
 
 if __name__ == "__main__":
     main()
