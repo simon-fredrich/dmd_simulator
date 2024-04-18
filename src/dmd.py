@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from mirror import Mirror
 
 class DMD:
     '''
@@ -19,6 +20,21 @@ class DMD:
         self.gap_y = gap_y # gap between mirrors in the y direction
         self.dmd_width = mirror_nr_x * (mirror_width + gap_x) - gap_x # total width of the dmd (x direction)
         self.dmd_height = mirror_nr_y * (mirror_height + gap_y) - gap_y # total height of the dmd (y direction)
+        self.mirrors = np.empty((self.mirror_nr_x, self.mirror_nr_y), Mirror)
+
+    def set_mirrors(self):
+        '''
+        Fill self.mirror_array with instances of the "Mirror" class
+        '''
+        support_vector = np.array([0, 0, 0])
+        tilt_angles = np.ones((self.mirror_nr_x, self.mirror_nr_y)) * 45
+        for m_x in np.arange(self.mirror_nr_x):
+            for m_y in np.arange(self.mirror_nr_y):
+                self.mirrors[m_x][m_y] = Mirror(support_vector, self.mirror_width, self.mirror_height, tilt_angles[m_x][m_y])
+                support_vector[1] += self.mirror_height + self.gap_y
+            support_vector[1] = 0
+            support_vector[0] += self.mirror_width + self.gap_x
+        
 
     def range_check(self, mirror_x, mirror_y, tilt_angle, s, t):
         '''
@@ -89,8 +105,7 @@ class DMD:
         '''
         Display surface of the dmd where all mirrors are in the 
         same state.
-        '''
-
+        '''      
         params_per_mirror = 4 # s & t number per mirror (resolution)
         width = int(self.mirror_nr_x * (self.mirror_width + self.gap_x))
         height = int(self.mirror_nr_y * (self.mirror_height + self.gap_y))
@@ -107,9 +122,9 @@ class DMD:
                 t = np.linspace(0, params_per_mirror, box[1])
                 
                 # get coordinate-meshgrids for displaying mirror plane
-                xx = self.get_x(m_x, m_y, tilt_angle, s, t)
-                yy = self.get_y(m_x, m_y, tilt_angle, s, t)
-                zz = self.get_z(m_x, m_y, tilt_angle, s, t)
+                xx = self.get_x(m_x, m_y, self.mirrors[m_x][m_y].tilt_angle, s, t)
+                yy = self.get_y(m_x, m_y, self.mirrors[m_x][m_y].tilt_angle, s, t)
+                zz = self.get_z(m_x, m_y, self.mirrors[m_x][m_y].tilt_angle, s, t)
 
                 # add mirror plane to 3d-plot
                 ax.plot_surface(xx, yy, zz, alpha=0.5)
@@ -125,6 +140,7 @@ def main():
     mirror_height = 5
     gap = 0.5
     dmd = DMD(mirror_nr_x, mirror_nr_y, mirror_width, mirror_height, gap, gap)
+    dmd.set_mirrors()
     dmd.show_surface(45)
 
 if __name__ == "__main__":
