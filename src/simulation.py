@@ -1,33 +1,77 @@
 import numpy as np
 from dmd import Dmd, save_surface
+from metadata import MetaData
 
 
 class Simulation:
-    def __init__(self, dmd, lam, t_min, t_max, t_step_size, p_min, p_max, p_step_size, tilt_angle):
-        self.dmd = dmd
+    def __init__(self, meta: MetaData):
         self.in_beam = np.zeros(2)
-        self.lam = lam
-        self.t_min = t_min
-        self.t_max = t_max
-        self.p_min = p_min
-        self.p_max = p_max
-        self.p_step_size = p_step_size
-        self.t_step_size = t_step_size
-        self.t_values = np.linspace(self.t_min + self.t_step_size, self.t_max, self.t_step_size)
-        self.p_values = np.linspace(self.p_min + self.p_step_size, self.p_max, self.t_step_size)
-        self.tilt_angle = tilt_angle
-        self.out_angles = self.calc_spherical_out_angles()
-        self.tilt_states = np.full((self.dmd.nr_x, self.dmd.nr_y), True)
+
+        self.meta = meta
+        self.nr_x = meta.nr_x
+        self.nr_y = meta.nr_y
+        self.mirror_size = np.sqrt(meta.lattice_constant*meta.lattice_constant*meta.fill_factor)
+        self.gap = meta.lattice_constant - self.mirror_size
+        self.dmd = Dmd(self.nr_x, self.nr_y, self.mirror_size, self.gap)
+
+        self.tilt_angle = meta.tilt_angle
+
+        self.lam = meta.lambdas[0]
+        self.lambdaUm = self.lam * 0.001
+
+        self.phi_min_d = meta.phi_out_start
+        self.phi_max_d = meta.phi_out_end
+        self.theta_min_d = meta.theta_out_start
+        self.theta_max_d = meta.theta_out_end
+        self.out_step_size_d = meta.out_step_size
+
+        self.t_max = int((self.theta_max_d - self.theta_min_d) / self.out_step_size_d)
+        self.p_max = int((self.phi_max_d - self.phi_min_d) / self.out_step_size_d)
+        self.tilt_angle = meta.tilt_angle
+        self.tilt_states = np.full((meta.nr_x, meta.nr_y), True)
+
+        self.reference_position = self.dmd.get_coordinates(0, 0, self.tilt_angle, 0, 0)
+
+        self.mirror_true = np.zeros((self.t_max, self.p_max), dtype=complex)
+        self.mirror_false = np.zeros((self.t_max, self.p_max), dtype=complex)
+        self.final_field = np.zeros((self.t_max, self.p_max), dtype=complex)
+
+        self.out_angles = np.empty((self.t_max, self.p_max), dtype=object)
+
+        self.init()
+
+    def init(self):
+        # Switching from degrees to radians
+        theta_min_r = self.theta_min_d * np.pi / 180
+        theta_max_r = self.theta_max_d * np.pi / 180
+        phi_min_r = self.phi_min_d * np.pi / 180
+        phi_max_r = self.phi_max_d * np.pi / 180
+        out_step_size_r = self.out_step_size_d * np.pi / 180
+
+        # Pre-calculations over the mirrors
+        tilt_states = np.zeros((self.nr_y, self.nr_x), dtype=bool)
+        dmd_positions = np.zeros((self.nr_y, self.nr_x), dtype=object)
+
+        for my in range(self.nr_y):
+            for mx in range(self.nr_x):
+                tilt_states[my, mx] = True
+                # angle_of_tilt = self.tilt_angle if tilt_states[my, mx] else -self.tilt_angle
+                # dmd_positions[my, mx] = self.dmd.get_coordinates(mx, my, angle_of_tilt, 0, 0)
+
+        self.out_angles = self.calc_spherical_out_angles(phi_min_r, self.p_max, theta_min_r, self.t_max,
+                                                         out_step_size_r)
+
+        print("initialization complete!")
 
     def set_in_beam(self, in_beam):
         self.in_beam = in_beam
 
-    def calc_spherical_out_angles(self):
+    def calc_spherical_out_angles(self, phi_min, nr_phi, theta_min, nr_theta, step_size):
         angles = np.empty((self.t_max, self.p_max), dtype=object)
         for th in range(self.t_max):
-            theta = self.t_min + th * self.t_step_size
+            theta = self.theta_min_d + th * self.out_step_size_d
             for ph in range(self.p_max):
-                phi = self.p_min + ph * self.p_step_size
+                phi = self.phi_min_d + ph * self.out_step_size_d
                 angles[th, ph] = np.array([phi, theta])
         return angles
 
@@ -39,6 +83,8 @@ class Simulation:
         for th in range(self.t_max):
             for ph in range(self.p_max):
                 field[th, ph] = self.calc_field_single_out_angle(self.out_angles[th, ph], gamma)
+
+        print("field calculated!")
 
         return field
 
@@ -99,18 +145,46 @@ class Simulation:
     def simulate_phase_shifting(self, in_beam):
         self.set_in_beam(in_beam)
         mirror_true = self.calc_field_single_mirror(True)
+        mirror_false = self.calc_field_single_mirror(False)
         true_intensity = self.build_intensity_image(mirror_true)
-        return true_intensity
+        false_intensity = self.build_intensity_image(mirror_false)
+        return true_intensity, false_intensity
+
 
 def main():
-    dmd = Dmd(nr_x=10, nr_y=10, mirror_size=10, gap=0.5)
-    sim = Simulation(dmd, 600e-1, -90, 90, 3, -90, 90, 0.5, 12)
-    theta_in = 45
-    phi_in = 45
+    meta = MetaData()
+    meta.out_dir = "../out"
+
+    meta.lambdas = [631]
+
+    meta.nr_x = 20
+    meta.nr_y = 20
+
+    meta.lattice_constant = 7.56
+    meta.fill_factor = 0.92
+    meta.tilt_angle = 12.0
+
+    meta.phi_out_start = -90
+    meta.phi_out_end = 90
+    meta.theta_out_start = -90
+    meta.theta_out_end = 90
+    meta.out_step_size = 2.26
+
+    meta.phi_in_start = 34.05
+    meta.phi_in_end = 35.05
+    meta.theta_in_start = -34.05
+    meta.theta_in_end = -33.05
+    meta.in_step_size = 1.0
+
+    sim = Simulation(meta)
+    theta_in = 23
+    phi_in = 23
     in_beam = np.array([phi_in * 2 * np.pi / 360, theta_in * 2 * np.pi / 360])
-    intensity = sim.simulate_phase_shifting(in_beam)
-    save_surface(intensity, "../out/intensity.pdf", "intensity distribution", "Phi", "Theta", "Intensity")
-    print(intensity)
+    intensities = sim.simulate_phase_shifting(in_beam)
+    save_surface(intensities[0], "../out/true_intensity.pdf", "intensity distribution", "Phi",
+                 "Theta", "True Intensity")
+    save_surface(intensities[1], "../out/false_intensity.pdf", "intensity distribution", "Phi",
+                 "Theta", "False ""Intensity")
 
 
 if __name__ == "__main__":
