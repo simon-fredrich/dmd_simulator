@@ -1,13 +1,33 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from dmd import Dmd, save_surface
+from dmd import Dmd, Dmd1d, save_surface
 from metadata import MetaData
+
+# from numba import int32, float32, complex64, char   # import the types
+# from numba.experimental import jitclass
+
+# spec = [
+#     ('dmd', Dmd1d.class_type.instance_type),
+#     ('k', float32),
+#     ("source_type", char),
+#     ("res", int32),
+#     ("pixels_x", int32),
+#     ("pixels_y", int32),
+#     ("incident_angle_deg", int32),
+#     ("incident_angle_rad", float32),
+#     ("x_range", float32),
+#     ("y_range", float32),
+#     ("X", float32),
+#     ("Y", float32),
+#     ("E_incident", complex64)
+# ]
 
 '''Below is the simulation for 1d mirrors.'''
 
+# @jitclass(spec)
 class Simulation1d:
-    def __init__(self, dmd:Dmd, incident_angle, wavelength, field_dimensions: tuple, res, source_type) -> None:
+    def __init__(self, dmd:Dmd1d, incident_angle, wavelength, field_dimensions: tuple, res, source_type) -> None:
         self.dmd = dmd
         self.k = 2 * np.pi / wavelength
         self.source_type = source_type
@@ -45,28 +65,6 @@ class Simulation1d:
                     E_total += self.get_E_reflected(r, phase_shift)
         
         return E_total
-
-    def display_field(self, E_total):
-        # Plotting
-        plt.figure(figsize=(12, 6))
-
-        # Plot the real part of the total reflected field
-        plt.subplot(1, 2, 1)
-        plt.contourf(self.X, self.Y, np.log(np.abs(E_total)), levels=50, cmap='viridis')
-        plt.title('abs(E_total)')
-        plt.xlabel('x')
-        plt.ylabel('y')
-
-        # Plot the imaginary part of the total reflected field
-        plt.subplot(1, 2, 2)
-        # plt.contourf(x, y, np.imag((E_total)), levels=50, cmap='plasma')
-        plt.contourf(self.X, self.Y, np.imag((self.E_incident)), levels=50, cmap='plasma')
-        # plt.colorbar(label='Incident Field Real')
-        plt.title('Imag(E_in)')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.tight_layout()
-        plt.show()
 
 
 '''Below should be the simulation approach for 2d mirrors, but is not yet implemented correctly'''

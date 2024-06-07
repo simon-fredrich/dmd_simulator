@@ -1,5 +1,84 @@
 import numpy as np
 import matplotlib.pyplot as plt
+# from numba import int32, float32, float64
+# from numba.experimental import jitclass
+
+# spec = [
+#     ("tilt_angle_deg", int32),
+#     ("tilt_angle_rad", float64),
+#     ("mirror_size", float64),
+#     ("mirror_gap", float64),
+#     ("mirror_coords_x", float64[:]),
+#     ("mirror_coords_y", float64[:]),
+#     ("nr_x", int32),
+#     ("nr_sources_per_mirror", int32),
+#     ("nr_sources_total", int32),
+#     ("width", float64),
+# ]
+
+# @jitclass(spec)
+class Dmd1d:
+    def __init__(self, tilt_angle, mirror_size, mirror_gap, nr_x, nr_sources_per_mirror) -> None:
+        self.tilt_angle_deg = tilt_angle
+        self.tilt_angle_rad = np.deg2rad(tilt_angle)
+        self.mirror_size = mirror_size
+        self.mirror_gap = mirror_gap
+        self.mirror_coords_x = np.linspace(0, mirror_size, nr_sources_per_mirror)
+        self.mirror_coords_y = np.zeros(nr_sources_per_mirror)
+        self.nr_x = nr_x
+        self.nr_sources_per_mirror = nr_sources_per_mirror
+        self.nr_sources_total = nr_x * nr_sources_per_mirror
+        self.width = (mirror_size + mirror_gap) * nr_x - mirror_gap
+
+    # check that values don't pass the boundaries
+    def check_values(self, nr_x, s):
+        if (s < 0) or (s > self.mirror_size): raise ValueError(f"Parameter s has to be inside [0, {self.mirror_size}], but value is {s}.")
+        if (nr_x < 0) or (nr_x >= self.nr_x): raise ValueError(f"Parameter nr_x has to be inside [0, {self.nr_x}), but value is {nr_x}.")
+    
+    # calculate rotated x coordinate
+    def get_x(self, nr_x, s):
+        self.check_values(nr_x, s)
+        cos = np.cos(self.tilt_angle_rad)
+        mirror_edge = (self.mirror_size + self.mirror_gap) * nr_x - self.width / 2
+        mirror_middle = self.mirror_size / 2.0
+        x = mirror_edge + (s - mirror_middle) * cos + mirror_middle
+        return x
+
+    # calculate rotated y coordinate
+    def get_y(self, nr_x, s):
+        self.check_values(nr_x, s)
+        sin = np.sin(self.tilt_angle_rad)
+        mirror_middle = self.mirror_size / 2.0
+        y = (s - mirror_middle) * sin
+        return y
+    
+    def get_phase_shift_old(self, nr_x, s, k, incident_angle_rad):
+        return k * (self.get_x(nr_x, s) * np.cos(incident_angle_rad) + self.get_y(nr_x, s) * np.sin(incident_angle_rad))
+    
+    def get_projection(self, nr_x, k, incident_angle_rad):
+        r_p = np.array([
+            self.get_x(nr_x, self.mirror_coords_x[0]) - self.get_x(nr_x, self.mirror_coords_x[-1]),
+            self.get_y(nr_x, self.mirror_coords_x[0]) - self.get_y(nr_x, self.mirror_coords_x[-1])])
+        r_p_norm = r_p/np.linalg.norm(r_p)
+        k_vector = k * np.array([np.cos(incident_angle_rad), np.sin(incident_angle_rad)])
+        return np.dot(k_vector, r_p_norm) * r_p_norm
+    
+    def get_phase_shift(self, nr_x, s, k_proj):
+        r = np.array([self.get_x(nr_x, s), self.get_y(nr_x, s)])
+        return np.dot(k_proj, r)
+    
+    def display_dmd(self):
+        
+
+        for nr_x in range(self.nr_x):
+            plt.plot([self.get_x(nr_x, s) for s in self.mirror_coords_x], [self.get_y(nr_x, s) for s in self.mirror_coords_x])
+
+
+        plt.title("Surface of the dmd")
+        plt.axis("equal")
+        plt.axhline(0, linestyle="dotted", zorder=-1, color="gray")
+        plt.tight_layout()
+        plt.show()
 
 
 class Dmd:
