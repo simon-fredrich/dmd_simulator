@@ -102,7 +102,6 @@ class Dmd:
 
         return surface
 
-
 def save_surface(surface, path, title, x_label, y_label, z_label):
     plt.figure(figsize=(10, 8))
     plt.imshow(surface, cmap='viridis', origin='lower')
@@ -114,8 +113,8 @@ def save_surface(surface, path, title, x_label, y_label, z_label):
 
 
 def main():
-    dmd = Dmd(nr_x=10, nr_y=10, mirror_size=10, gap=0.5)
-    surface = dmd.get_surface_view(5, np.ones(shape=(10, 10)) * 12)
+    dmd = Dmd(nr_x=20, nr_y=20, mirror_size=10, gap=0.5)
+    surface = dmd.get_surface_view(5, np.ones(shape=(20, 20)) * 12)
     save_surface(surface, "../out/test_image.pdf", "surface visualization", "x", "y", "z")
 
 

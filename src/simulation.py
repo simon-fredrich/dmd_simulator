@@ -1,11 +1,14 @@
 import numpy as np
+from matplotlib import pyplot as plt
+
 from dmd import Dmd, save_surface
 from metadata import MetaData
+from vector import Vector
 
 
 class Simulation:
     def __init__(self, meta: MetaData):
-        self.in_beam = np.zeros(2)
+        self.in_beam = Vector(1, 1)
 
         self.meta = meta
         self.nr_x = meta.nr_x
@@ -66,13 +69,45 @@ class Simulation:
     def set_in_beam(self, in_beam):
         self.in_beam = in_beam
 
+    def calc_out_beam(self):
+        # maximum values in the mirror coordinate system to get the corner points of the mirror
+        s_max = self.dmd.mirror_width
+        t_max = self.dmd.mirror_height
+
+        # calculate three points for representing the mirror plane
+        A = self.dmd.get_coordinates(0, 0, 12, 0, 0)
+        B = self.dmd.get_coordinates(0, 0, 12, 0, t_max)
+        C = self.dmd.get_coordinates(0, 0, 12, s_max, 0)
+
+        # calculating vectors between one corner point and the others (of the mirror)
+        AB = B - A
+        AC = C - A
+
+        # calculating the normal to the mirror plane
+        n_0 = np.cross(AB, AC)
+
+        # normalizing the normal to the mirror plane
+        n = n_0 / np.linalg.norm(n_0)
+
+        # calculating the outgoing beam as a vector
+        out_beam = in_beam - 2 * np.dot(np.dot(in_beam, n), n)
+
+        # printing the incident and outgoing beam in the terminal
+        print("in_beam: ", self.in_beam)
+        print("out_beam: ", out_beam)
+
+        return out_beam
+
+    def calc_field_at_pos(self):
+        pass
+
     def calc_spherical_out_angles(self, phi_min, nr_phi, theta_min, nr_theta, step_size):
         angles = np.empty((self.t_max, self.p_max), dtype=object)
         for th in range(self.t_max):
             theta = self.theta_min_d + th * self.out_step_size_d
             for ph in range(self.p_max):
                 phi = self.phi_min_d + ph * self.out_step_size_d
-                angles[th, ph] = np.array([phi, theta])
+                angles[th, ph] = Vector(phi * 2 * np.pi / 360, theta * 2 * np.pi / 360)
         return angles
 
     def calc_field_single_mirror(self, tilt_state):
@@ -91,17 +126,13 @@ class Simulation:
     def calc_field_single_out_angle(self, out, gamma):
         m = self.dmd.mirror_width
 
-        az = np.sqrt(1 / (np.tan(self.in_beam[0]) ** 2 + np.tan(self.in_beam[1]) ** 2))
-        ax = az * np.tan(self.in_beam[0])
-        ay = az * np.tan(self.in_beam[1])
+        ax = self.in_beam.x
+        ay = self.in_beam.y
+        az = self.in_beam.z
 
-        if (np.tan(out[0]) ** 2 + np.tan(out[1]) ** 2) == 0:
-            print("Durch null geteilt.")
-            print(out)
-
-        bz = np.sqrt(1 / (np.tan(out[0]) ** 2 + np.tan(out[1]) ** 2))
-        bx = bz * np.tan(out[0])
-        by = bz * np.tan(out[1])
+        bx = out.x
+        by = out.y
+        bz = out.z
 
         s2 = np.sqrt(2)
         cg = np.cos(gamma)
@@ -150,6 +181,14 @@ class Simulation:
         false_intensity = self.build_intensity_image(mirror_false)
         return true_intensity, false_intensity
 
+def show_intensities(intensities):
+    fig, ax = plt.subplots(len(intensities), 1)
+    for idx, intensity in enumerate(intensities):
+        ax[idx].imshow(intensity, cmap='viridis', origin='lower')
+        ax[idx].colorbar(label="z")
+        ax[idx].xlabel("x")
+        ax[idx].ylabel("y")
+
 
 def main():
     meta = MetaData()
@@ -157,8 +196,8 @@ def main():
 
     meta.lambdas = [631]
 
-    meta.nr_x = 20
-    meta.nr_y = 20
+    meta.nr_x = 100
+    meta.nr_y = 100
 
     meta.lattice_constant = 7.56
     meta.fill_factor = 0.92
@@ -168,7 +207,7 @@ def main():
     meta.phi_out_end = 90
     meta.theta_out_start = -90
     meta.theta_out_end = 90
-    meta.out_step_size = 2.26
+    meta.out_step_size = 2.66
 
     meta.phi_in_start = 34.05
     meta.phi_in_end = 35.05
@@ -177,14 +216,20 @@ def main():
     meta.in_step_size = 1.0
 
     sim = Simulation(meta)
-    theta_in = 23
-    phi_in = 23
-    in_beam = np.array([phi_in * 2 * np.pi / 360, theta_in * 2 * np.pi / 360])
+    theta_in = 0.01
+    phi_in = 0.01
+    in_beam = Vector(phi_in * 2 * np.pi / 360, theta_in * 2 * np.pi / 360)
     intensities = sim.simulate_phase_shifting(in_beam)
-    save_surface(intensities[0], "../out/true_intensity.pdf", "intensity distribution", "Phi",
+    save_surface(intensities[0], "../out/true_intensity.pdf", "intensity distribution for true state", "Phi",
                  "Theta", "True Intensity")
-    save_surface(intensities[1], "../out/false_intensity.pdf", "intensity distribution", "Phi",
+    save_surface(intensities[1], "../out/false_intensity.pdf", "intensity distribution for false state", "Phi",
                  "Theta", "False ""Intensity")
+
+    plt.show()
+
+
+    # surface = sim.dmd.get_surface_view(100, np.ones(shape=(sim.nr_x, sim.nr_y)) * sim.tilt_angle)
+    # save_surface(surface, "../out/test_image.pdf", "surface visualization", "x", "y", "z")
 
 
 if __name__ == "__main__":
