@@ -1,0 +1,44 @@
+\documentclass{article}
+\usepackage{csquotes}
+
+%%% Literaturangaben %%%
+\usepackage[style=numeric]{biblatex}
+\addbibresource{./citations.bib}
+
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage[ngerman]{babel}
+
+%%% Abkürzungen %%%
+\usepackage[nohyperlinks, printonlyused]{acronym}
+
+\begin{document}
+\title{Light propagation simulations for digital holography}
+\author{Simon Malte Fredrich}
+\maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+\section*{Abkürzungsverzeichnis}
+\begin{acronym}
+    \acro{Kürzel}[Kurzform]{Langform}
+\end{acronym}
+
+\newpage
+
+%%% Anfang Fließtext %%%
+\input{einleitung.tex}
+\input{grundlagen.tex}
+\input{motivation.tex}
+% \input{preview.tex}
+% \input{foundation.tex}
+% \input{calculations.tex}
+
+
+
+%%% Ende Fließtext %%%
+
+
+\printbibliography
+
+\end{document}
