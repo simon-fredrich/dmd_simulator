@@ -3,8 +3,73 @@ from matplotlib import pyplot as plt
 
 from dmd import Dmd, save_surface
 from metadata import MetaData
-from vector import Vector
 
+'''Below is the simulation for 1d mirrors.'''
+
+class Simulation1d:
+    def __init__(self, dmd:Dmd, incident_angle, wavelength, field_dimensions: tuple, res, source_type) -> None:
+        self.dmd = dmd
+        self.k = 2 * np.pi / wavelength
+        self.source_type = source_type
+        self.res = res
+        self.pixels_x = res * field_dimensions[0]
+        self.pixels_y = res * field_dimensions[1]
+        self.incident_angle_deg = incident_angle
+        self.incident_angle_rad = np.deg2rad(incident_angle)
+
+        # define the range where the field should be calculated
+        self.x_range = np.linspace(-field_dimensions[0]/2, field_dimensions[0]/2, self.pixels_x)
+        self.y_range = np.linspace(0, field_dimensions[1], self.pixels_y) - self.dmd.mirror_size/2
+        self.X, self.Y = np.meshgrid(self.x_range, self.y_range)
+
+        self.E_incident = np.exp(1j * self.k * (self.X * np.cos(self.incident_angle_rad) + self.Y * np.sin(self.incident_angle_rad)))
+
+    def get_E_reflected(self, r, phase_shift):
+        return np.exp(1j * (self.k * r + phase_shift))
+
+    def get_E_total(self):
+        epsilon = 1e-10
+        E_total = np.zeros_like(self.X, dtype=complex)
+
+        for nr_x in range(self.dmd.nr_x):
+            k_proj = self.dmd.get_projection(nr_x, self.k, self.incident_angle_rad)
+            for s in self.dmd.mirror_coords_x:
+                r = np.sqrt(np.square(self.X - self.dmd.get_x(nr_x, s)) + np.square(self.Y - self.dmd.get_y(nr_x, s)))
+                phase_shift = self.dmd.get_phase_shift(nr_x, s, k_proj)
+                #phase_shift = self.dmd.get_phase_shift_old(nr_x, s, self.k, self.incident_angle_rad)
+
+                # different fields based on the source type
+                if self.source_type == "spherical":
+                    E_total += self.get_E_reflected(r, phase_shift) / (r + epsilon)
+                elif self.source_type == "plane":
+                    E_total += self.get_E_reflected(r, phase_shift)
+        
+        return E_total
+
+    def display_field(self, E_total):
+        # Plotting
+        plt.figure(figsize=(12, 6))
+
+        # Plot the real part of the total reflected field
+        plt.subplot(1, 2, 1)
+        plt.contourf(self.X, self.Y, np.log(np.abs(E_total)), levels=50, cmap='viridis')
+        plt.title('abs(E_total)')
+        plt.xlabel('x')
+        plt.ylabel('y')
+
+        # Plot the imaginary part of the total reflected field
+        plt.subplot(1, 2, 2)
+        # plt.contourf(x, y, np.imag((E_total)), levels=50, cmap='plasma')
+        plt.contourf(self.X, self.Y, np.imag((self.E_incident)), levels=50, cmap='plasma')
+        # plt.colorbar(label='Incident Field Real')
+        plt.title('Imag(E_in)')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.tight_layout()
+        plt.show()
+
+
+'''Below should be the simulation approach for 2d mirrors, but is not yet implemented correctly'''
 
 class Simulation:
     def __init__(self, meta: MetaData):
