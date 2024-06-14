@@ -1,0 +1,36 @@
+\section{Simulation}
+Um die grundlegende Funktionalität des DMDs zu implementieren und die Grundkonzepte der Simulation zu erproben, wird zunächst eine eindimensionale Simulation erstellt. Darauf aufbauend wird eine zweidimensionale Simulation ausgearbeitet, um experimentelle Ergebnisse nachzustellen oder vorherzusagen.
+
+
+\subsection{Eindimensionale Spiegel}
+In dieser eindimensionalen Version erstreckt sich das DMD in die x-Achse, wobei sich die Spiegel um die dazu 
+
+\begin{equation}
+    \begin{aligned}
+        \left(\begin{matrix}
+            x'\\y'
+        \end{matrix}\right) =
+        \left(\begin{matrix}
+            \cos(\theta) & -\sin(\theta)\\ 
+            \sin(\theta) & \cos(\theta)
+        \end{matrix}\right) \cdot
+        \left(\begin{matrix}
+            s - x_{\text{Mitte}}\\ 
+            0 - y_{\text{Mitte}}
+        \end{matrix}\right) + 
+        \left(\begin{matrix}
+            x_{\text{Mitte}}\\ 
+            y_{\text{Mitte}}
+        \end{matrix}\right)
+    \end{aligned}
+\end{equation}
+
+\begin{equation}
+    \begin{aligned}
+        \vec{k}_{\text{Spiegel}} = \left(\vec{k}\cdot\hat{r}_{\text{Spiegel}}\right)\cdot\hat{r}_{\text{Spiegel}}
+    \end{aligned}
+\end{equation}
+
+\begin{equation}
+    E_{\text{total}, \vec{r}_i}=\sum_{m=0}^{M}\sum_{n=0}^{N}\exp(i(k\cdot r_i+\Delta\phi_{n, m}))
+\end{equation}
