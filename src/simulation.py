@@ -8,13 +8,18 @@ from dmd import Dmd1d, Dmd2d, save_surface
 class Simulation1d:
     def __init__(self, dmd:Dmd1d, incident_angle, wavelength, field_dimensions: tuple, res, source_type) -> None:
         self.dmd = dmd
+
+        # wave
         self.k = 2 * np.pi / wavelength
+        self.incident_angle_deg = incident_angle
+        self.incident_angle_rad = np.deg2rad(incident_angle)
+        self.k_vector = - self.k * np.array([np.cos(self.incident_angle_rad), np.sin(self.incident_angle_rad)])
+
         self.source_type = source_type
         self.res = res
         self.pixels_x = res * field_dimensions[0]
         self.pixels_y = res * field_dimensions[1]
-        self.incident_angle_deg = incident_angle
-        self.incident_angle_rad = np.deg2rad(incident_angle)
+        
 
         # define the range where the field should be calculated
         self.x_range = np.linspace(-field_dimensions[0]/2, field_dimensions[0]/2, self.pixels_x)
@@ -22,6 +27,29 @@ class Simulation1d:
         self.X, self.Y = np.meshgrid(self.x_range, self.y_range)
 
         self.E_incident = np.exp(1j * self.k * (self.X * np.cos(self.incident_angle_rad) + self.Y * np.sin(self.incident_angle_rad)))
+
+    def get_phase_shift_mirrors(self, nr_mirror_x1, nr_mirror_x2):
+        x1 = self.dmd.get_x(nr_mirror_x1, 0)
+        y1 = self.dmd.get_x(nr_mirror_x1, 0)
+        x2 = self.dmd.get_x(nr_mirror_x2, 0)
+        y2 = self.dmd.get_x(nr_mirror_x2, 0)
+        r1 = np.array([x1, y1])
+        r2 = np.array([x2, y2])
+        kx = np.array([0, self.k_vector[1]])  # projection of k_vector onto the x-axis
+        return np.dot(kx, r2-r1)
+    
+    def get_phase_shift_point_sources(self, nr_mirror_x):
+        x1 = self.dmd.get_x(nr_mirror_x, 0)
+        x2 = self.dmd.get_x(nr_mirror_x, self.dmd.mirror_size)
+        y1 = self.dmd.get_x(nr_mirror_x, 0)
+        y2 = self.dmd.get_x(nr_mirror_x, self.dmd.mirror_size)
+        r0 = np.array([x2-x1, y2-y1])  # vector inside mirror plane
+        r0_norm = r0/np.linalg.norm(r0)
+        km = np.dot(self.k_vector, r0_norm)*r0_norm # projection of k_vector onto the 0th mirror
+        return np.dot(km, r0_norm)*np.linalg.norm(r0)/self.dmd.nr_sources_per_mirror
+    
+    def get_phases(self):
+        delta_phase_m = self.get_phase_shift_mirrors(0, 1)
 
     def get_E_reflected(self, r, phase_shift):
         return np.exp(1j * (self.k * r + phase_shift))
