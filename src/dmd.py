@@ -14,8 +14,15 @@ class Dmd1d:
         self.nr_sources_per_mirror = nr_sources_per_mirror
         self.nr_sources_total = nr_mirrors_x * nr_sources_per_mirror
         self.width = (mirror_size + mirror_gap) * nr_mirrors_x - mirror_gap
-        self.mirror_pos_x = [self.get_x(nr_mirrors_x=i, s=j) for j in np.linspace(0, mirror_size, nr_sources_per_mirror) for i in range(nr_mirrors_x)]
-        self.mirror_pos_y = [self.get_y(nr_mirrors_x=i, s=j) for j in np.linspace(0, mirror_size, nr_sources_per_mirror) for i in range(nr_mirrors_x)]
+
+    def get_source_positions(self):
+        source_positions = np.zeros((self.nr_mirrors_x, self.nr_sources_per_mirror, 2))
+        for nr_mirror_x in range(self.nr_mirrors_x):
+            for nr_source, s in enumerate(self.mirror_coords_x):
+                source_positions[nr_mirror_x, nr_source, 0] = self.get_x(nr_mirror_x, s)
+                source_positions[nr_mirror_x, nr_source, 1] = self.get_y(nr_mirror_x, s)
+        return source_positions
+
 
     # check that values don't pass the boundaries
     def check_values(self, nr_mirrors_x, s):
@@ -23,40 +30,25 @@ class Dmd1d:
         if (nr_mirrors_x < 0) or (nr_mirrors_x >= self.nr_mirrors_x): raise ValueError(f"Parameter nr_mirrors_x has to be inside [0, {self.nr_mirrors_x}), but value is {nr_mirrors_x}.")
     
     # calculate rotated x coordinate
-    def get_x(self, nr_mirrors_x, s):
-        self.check_values(nr_mirrors_x, s)
+    def get_x(self, nr_mirror_x, s):
+        self.check_values(nr_mirror_x, s)
         cos = np.cos(self.tilt_angle_rad)
-        mirror_edge = (self.mirror_size + self.mirror_gap) * nr_mirrors_x - self.width / 2.0
+        mirror_edge = (self.mirror_size + self.mirror_gap) * nr_mirror_x - self.width / 2.0
         mirror_middle = self.mirror_size / 2.0
         x = mirror_edge + (s - mirror_middle) * cos + mirror_middle
         return x
 
     # calculate rotated y coordinate
-    def get_y(self, nr_mirrors_x, s):
-        self.check_values(nr_mirrors_x, s)
+    def get_y(self, nr_mirror_x, s):
+        self.check_values(nr_mirror_x, s)
         sin = np.sin(self.tilt_angle_rad)
         mirror_middle = self.mirror_size / 2.0
         y = (s - mirror_middle) * sin
         return y
     
-    def get_projection(self, nr_mirrors_x, k, incident_angle_rad):
-        r_p = np.array([
-            self.get_x(nr_mirrors_x, self.mirror_coords_x[0]) - self.get_x(nr_mirrors_x, self.mirror_coords_x[-1]),
-            self.get_y(nr_mirrors_x, self.mirror_coords_x[0]) - self.get_y(nr_mirrors_x, self.mirror_coords_x[-1])])
-        r_p_norm = r_p/np.linalg.norm(r_p)
-        k_vector = - k * np.array([np.cos(incident_angle_rad), np.sin(incident_angle_rad)])
-        return np.dot(k_vector, r_p_norm) * r_p_norm
-    
-    def get_phase_shift(self, nr_mirrors_x, s, k_proj):
-        r = np.array([self.get_x(nr_mirrors_x, s), self.get_y(nr_mirrors_x, s)])
-        return np.dot(k_proj, r)
-    
     def display_dmd(self):
-
         for nr_mirrors_x in range(self.nr_mirrors_x):
             plt.plot([self.get_x(nr_mirrors_x, s) for s in self.mirror_coords_x], [self.get_y(nr_mirrors_x, s) for s in self.mirror_coords_x])
-
-
         plt.title("Surface of the dmd")
         plt.axis("equal")
         plt.axhline(0, linestyle="dotted", zorder=-1, color="gray")
@@ -193,7 +185,15 @@ def save_surface(surface, path, title, x_label, y_label, z_label):
 
 
 def main():
-    pass
+    dmd = Dmd1d(0, 10, 1, 5, 10)
+    pos = dmd.get_source_positions()
+    # print(pos[0])
+    for i in pos:
+        x = [i[j][0] for j in range(len(i))]
+        y = [i[j][1] for j in range(len(i))]
+        plt.plot(x, y)
+    plt.show()
+
 
 
 if __name__ == "__main__":
