@@ -7,18 +7,36 @@ from dmd import Dmd1d, Dmd2d, save_surface
 
 class Simulation1d:
     def __init__(self, dmd:Dmd1d, incident_angle, wavelength, field_dimensions: tuple, res, source_type) -> None:
+        # parameters concerning the dmd
         self.dmd = dmd
+        self.dmd_source_pos = dmd.get_source_positions()
+        self.dmd_source_x0 = [self.dmd_source_pos[0][i][0] for i in range(dmd.nr_sources_per_mirror)]  # source x-pos of 0th mirror
+        self.dmd_source_y0 = [self.dmd_source_pos[0][i][1] for i in range(dmd.nr_sources_per_mirror)]  # source y-pos of 0th mirror
+        self.rm = np.array([abs(self.dmd_source_x0[0]-self.dmd_source_x0[-1]),
+                           abs(self.dmd_source_y0[0]-self.dmd_source_y0[-1])])  # vector inside mirror plane
+        self.distance_between_sources = np.linalg.norm(self.rm)/dmd.nr_sources_per_mirror
+        self.rm_norm = self.rm/np.linalg.norm(self.rm)  # normalized vector inside mirror plane+
+
 
         # wave
         self.k = 2 * np.pi / wavelength
         self.incident_angle_deg = incident_angle
         self.incident_angle_rad = np.deg2rad(incident_angle)
         self.k_vector = - self.k * np.array([np.cos(self.incident_angle_rad), np.sin(self.incident_angle_rad)])
-
         self.source_type = source_type
-        self.res = res
-        self.pixels_x = res * field_dimensions[0]
-        self.pixels_y = res * field_dimensions[1]
+
+
+        # calculate projections
+        self.km = np.dot(self.k_vector, self.rm_norm) * self.rm_norm  # projection along mirror plane
+        self.kx = np.dot(self.k_vector, np.array([1, 0])) * np.array([1, 0])  # projection along x-axis
+        self.phase_shifts = self.get_total_phases()  # get all phase shifts in one big array
+
+
+        # field parameters
+        self.field_dimensions = field_dimensions
+        self.res = res  # number of pixels for a single field dimension point
+        self.pixels_x = res * field_dimensions[0]  # total number of pixels in x-direction
+        self.pixels_y = res * field_dimensions[1]  # total number of pixels in y-direction
         
 
         # define the range where the field should be calculated
@@ -26,44 +44,53 @@ class Simulation1d:
         self.y_range = np.linspace(0, field_dimensions[1], self.pixels_y) - self.dmd.mirror_size/2
         self.X, self.Y = np.meshgrid(self.x_range, self.y_range)
 
+
+        # calculate incoming field
         self.E_incident = np.exp(1j * self.k * (self.X * np.cos(self.incident_angle_rad) + self.Y * np.sin(self.incident_angle_rad)))
 
+
     def get_phase_shift_mirrors(self, nr_mirror_x1, nr_mirror_x2):
-        x1 = self.dmd.get_x(nr_mirror_x1, 0)
-        y1 = self.dmd.get_x(nr_mirror_x1, 0)
-        x2 = self.dmd.get_x(nr_mirror_x2, 0)
-        y2 = self.dmd.get_x(nr_mirror_x2, 0)
-        r1 = np.array([x1, y1])
-        r2 = np.array([x2, y2])
-        kx = np.array([0, self.k_vector[1]])  # projection of k_vector onto the x-axis
-        return np.dot(kx, r2-r1)
+        # get position of 0th point-source for each mirror
+        x1 = self.dmd_source_pos[nr_mirror_x1][0][0]
+        y1 = self.dmd_source_pos[nr_mirror_x1][0][1]
+        x2 = self.dmd_source_pos[nr_mirror_x2][0][0]
+        y2 = self.dmd_source_pos[nr_mirror_x2][0][1]
+        r12 = np.array([x2-x1, y2-y1])  # vector pointing from one mirror to the other
+        return np.dot(self.kx, r12)  # return the phase shift of both mirrors
     
-    def get_phase_shift_point_sources(self, nr_mirror_x):
-        x1 = self.dmd.get_x(nr_mirror_x, 0)
-        x2 = self.dmd.get_x(nr_mirror_x, self.dmd.mirror_size)
-        y1 = self.dmd.get_x(nr_mirror_x, 0)
-        y2 = self.dmd.get_x(nr_mirror_x, self.dmd.mirror_size)
-        r0 = np.array([x2-x1, y2-y1])  # vector inside mirror plane
-        r0_norm = r0/np.linalg.norm(r0)
-        km = np.dot(self.k_vector, r0_norm)*r0_norm # projection of k_vector onto the 0th mirror
-        return np.dot(km, r0_norm)*np.linalg.norm(r0)/self.dmd.nr_sources_per_mirror
+    def get_phase_shift_point_source(self, nr_mirror_x, nr_source):
+        distance = self.distance_between_sources*nr_source
+        mirror_phase = self.get_phase_shift_mirrors(0, nr_mirror_x)
+        source_phase = mirror_phase + (np.dot(self.km, self.rm_norm) * distance)
+        return source_phase  # return phase shift of 0th mirror and current point-source 
     
-    def get_phases(self):
-        delta_phase_m = self.get_phase_shift_mirrors(0, 1)
+    def get_total_phases(self):
+        # create array to hold phase shifts of point sources that are
+        # categorized into the mirrors they are associated with
+        total_phases = np.zeros((self.dmd.nr_mirrors_x, self.dmd.nr_sources_per_mirror))
+        for nr_mirror_x in range(self.dmd.nr_mirrors_x):
+            for nr_source in range(self.dmd.nr_sources_per_mirror):
+                total_phases[nr_mirror_x, nr_source] = self.get_phase_shift_point_source(nr_mirror_x, nr_source)
+        return total_phases
+            
 
     def get_E_reflected(self, r, phase_shift):
         return np.exp(1j * (self.k * r + phase_shift))
 
     def get_E_total(self):
         epsilon = 1e-10
+
+        # create array to hold field values
         E_total = np.zeros_like(self.X, dtype=complex)
 
-        for nr_x in range(self.dmd.nr_x):
-            k_proj = self.dmd.get_projection(nr_x, self.k, self.incident_angle_rad)
-            for s in self.dmd.mirror_coords_x:
-                r = np.sqrt(np.square(self.X - self.dmd.get_x(nr_x, s)) + np.square(self.Y - self.dmd.get_y(nr_x, s)))
-                phase_shift = self.dmd.get_phase_shift(nr_x, s, k_proj)
-                #phase_shift = self.dmd.get_phase_shift_old(nr_x, s, self.k, self.incident_angle_rad)
+        # loop over each point source and determine their phase shift
+        # then add contribution to the total field based on source type
+        for nr_mirror in range(self.dmd.nr_mirrors_x):
+            for nr_source in range(self.dmd.nr_sources_per_mirror):
+                xs = self.dmd_source_pos[nr_mirror][nr_source][0]
+                ys = self.dmd_source_pos[nr_mirror][nr_source][1]
+                r = np.sqrt(np.square(self.X - xs) + np.square(self.Y - ys))
+                phase_shift = self.get_phase_shift_point_source(nr_mirror, nr_source)
 
                 # different fields based on the source type
                 if self.source_type == "spherical":
@@ -72,6 +99,20 @@ class Simulation1d:
                     E_total += self.get_E_reflected(r, phase_shift)
         
         return E_total
+
+    def get_field_profile(self, field, y):
+        # calculate the shift due to shifting the field
+        # because I wanted to calculate the field a little below zero
+        y_shift = y + self.dmd.mirror_size/2
+        # mapping the real x-coordinate to the array index
+        y_mapped = int(y_shift * self.pixels_y/self.field_dimensions[1])
+        return field[y_mapped]  # return the field profile at set y-value
+    
+    def plot_field_profile(self, field, y):
+        # plotting the field profile
+        field_profile = self.get_field_profile(field, y)
+        plt.plot(np.linspace(-self.field_dimensions[0]/2, self.field_dimensions[0]/2, len(field_profile)), abs(field_profile))
+        plt.show()
     
 
 class Simulation2d:
@@ -142,7 +183,9 @@ def show_intensities(intensities):
 
 
 def main():
-    pass
+    dmd = Dmd1d(0, 10, 1, 5, 10)
+    sim = Simulation1d(dmd, 90, 1, (10, 10), 1, "spherical")
+    print(sim.get_phase_shift_point_source(1, 0))
 
 
 if __name__ == "__main__":
