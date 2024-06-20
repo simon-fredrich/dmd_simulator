@@ -1,36 +1,60 @@
 \section{Simulation}
-Um die grundlegende Funktionalität des DMDs zu implementieren und die Grundkonzepte der Simulation zu erproben, wird zunächst eine eindimensionale Simulation erstellt. Darauf aufbauend wird eine zweidimensionale Simulation ausgearbeitet, um experimentelle Ergebnisse nachzustellen oder vorherzusagen.
+Um die grundlegende Funktionalität des DMDs zu implementieren und die Grundkonzepte der Simulation zu erproben, wird zunächst eine zweidimensionale Simulation erstellt. Darauf aufbauend wird eine dreidimentionale Simulation ausgearbeitet, um experimentelle Ergebnisse nachzustellen oder vorherzusagen.
 
 
-\subsection{Eindimensionale Spiegel}
-In dieser eindimensionalen Version erstreckt sich das DMD in die x-Achse, wobei sich die Spiegel um die dazu 
-
+\subsection{Zwei Dimensionen}
+In dieser zweidimensionalen Version liegen die Koordinaten des DMD auf der x-Achse. Dazu sind die Spiegel mit einem Abstand entlang dieser Achse angeordnet und bewegen sich in der xy-Ebene, wobei sie sich um die senkrecht auf dieser Ebene stehenden Achse um ihren Mittelpunkt drehen.
+\subsubsection{Drehung}
+Zu Beginn sind alle Spiegel in dem Zustand „off“ und die Koordinaten der Spiegel $(x_i, y_i)$ liegen auf der x-Achse, also $y_i=0$. Um die Spiegel um den Winkel $\alpha$ zu drehen, müssen die Koordinaten mit der Drehmatrix
+\begin{equation}
+    D_2=\left(\begin{matrix}
+        \cos(\alpha) & -\sin(\alpha)\\ 
+        \sin(\alpha) & \cos(\alpha)
+    \end{matrix}\right)
+\end{equation}
+transformiert werden. Dazu muss der Koordinatenursprung kurz auf den Mittelpunkt $(x_{m,i}, y_{m,i})$ des zu drehenden Spiegels verschoben, die Transformation vorgenommen und anschließend der Urprung wieder in die Ausgangsposition gebracht werden.
 \begin{equation}
     \begin{aligned}
         \left(\begin{matrix}
-            x'\\y'
+            x_i'\\y_i'
         \end{matrix}\right) =
+        D_2 \cdot
         \left(\begin{matrix}
-            \cos(\theta) & -\sin(\theta)\\ 
-            \sin(\theta) & \cos(\theta)
-        \end{matrix}\right) \cdot
-        \left(\begin{matrix}
-            s - x_{\text{Mitte}}\\ 
-            0 - y_{\text{Mitte}}
+            x_i - x_{m,i}\\ 
+            y_i - y_{m,i}
         \end{matrix}\right) + 
         \left(\begin{matrix}
-            x_{\text{Mitte}}\\ 
-            y_{\text{Mitte}}
+            x_{m,i}\\ 
+            y_{m,i}
         \end{matrix}\right)
     \end{aligned}
 \end{equation}
 
+\subsubsection{Phasenverschiebung}
+Die einfallende ebene Welle trifft jeden Punkt der Spiegel des DMDs mit unterschiedlicher Phase. Um die Phase $\Delta\phi_{s}$ zwischen den dem nullten und $j$-ten Spiegel zu berechnen wird die Projektion des Wellenvektors auf die x-Achse
 \begin{equation}
-    \begin{aligned}
-        \vec{k}_{\text{Spiegel}} = \left(\vec{k}\cdot\hat{r}_{\text{Spiegel}}\right)\cdot\hat{r}_{\text{Spiegel}}
-    \end{aligned}
+    \vec{k}_{x} = \left(\vec{k}\cdot\hat{x}\right)\cdot\hat{x}
 \end{equation}
+mit dem Abstandsvektor zwischen den Spiegeln $\vec{r}_{0, j}$ skalar multipliziert
+\begin{equation}
+    \Delta\phi_{s, j} = \vec{k}_x\cdot \vec{r}_{0, j}.
+\end{equation}
+Die Phase $\Delta\phi_{q}$ entlang der Spiegel zwischen zwei Punktquellen berechnet sich ähnlich. Hier wird die Projektion des Wellenvektors $\vec{k}$ in die Spiegelebene
+\begin{equation}
+    \vec{k}_{s} = \left(\vec{k}\cdot\hat{r}_{s}\right)\cdot\hat{r}_{s}
+\end{equation}
+und der Vektor zwischen zwei Punktquellen $\vec{r}_q$ genutzt um den Phasenversatz
+\begin{equation}
+    \Delta\phi_{q} = \vec{k}_{s}\cdot \vec{r}_q
+\end{equation}
+zu berechnen.
 
+Der Phasenversatz der $n$-ten Punktquelle des $m$-ten Spiegels wird mit 
 \begin{equation}
-    E_{\text{total}, \vec{r}_i}=\sum_{m=0}^{M}\sum_{n=0}^{N}\exp(i(k\cdot r_i+\Delta\phi_{n, m}))
+    \Delta\phi_{m, n} = \Delta\phi_{s, m} + \Delta\phi_{q, n}
 \end{equation}
+berechnet, womit man dann das Feld an der Koordinate $\vec{r}_i$
+\begin{equation}
+    E_{\text{total}, \vec{r}_i}=\sum_{m=0}^{M}\sum_{n=0}^{N}\exp(i(k\cdot r_i+\Delta\phi_{m, n}))
+\end{equation}
+erhält.
