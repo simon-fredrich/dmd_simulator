@@ -6,7 +6,7 @@ from dmd import Dmd1d, Dmd2d, save_surface
 '''Below is the simulation for 1d mirrors.'''
 
 class Simulation1d:
-    def __init__(self, dmd:Dmd1d, incident_angle, wavelength, field_dimensions: tuple, res, source_type) -> None:
+    def __init__(self, dmd:Dmd1d, incident_angle, wavelength, field_dimensions: tuple, res, source_type="spherical", phase_shift=True) -> None:
         # parameters concerning the dmd
         self.dmd = dmd
         self.dmd_source_pos = dmd.get_source_positions()
@@ -24,6 +24,7 @@ class Simulation1d:
         self.incident_angle_rad = np.deg2rad(incident_angle)
         self.k_vector = - self.k * np.array([np.cos(self.incident_angle_rad), np.sin(self.incident_angle_rad)])
         self.source_type = source_type
+        self.phase_shift = phase_shift
 
 
         # calculate projections
@@ -62,6 +63,7 @@ class Simulation1d:
         distance = self.distance_between_sources*nr_source
         mirror_phase = self.get_phase_shift_mirrors(0, nr_mirror_x)
         source_phase = mirror_phase + (np.dot(self.km, self.rm_norm) * distance)
+        # source_phase = 0
         return source_phase  # return phase shift of 0th mirror and current point-source 
     
     def get_total_phases(self):
@@ -85,12 +87,14 @@ class Simulation1d:
 
         # loop over each point source and determine their phase shift
         # then add contribution to the total field based on source type
-        for nr_mirror in range(self.dmd.nr_mirrors_x):
+        for nr_mirror_x in range(self.dmd.nr_mirrors_x):
             for nr_source in range(self.dmd.nr_sources_per_mirror):
-                xs = self.dmd_source_pos[nr_mirror][nr_source][0]
-                ys = self.dmd_source_pos[nr_mirror][nr_source][1]
+                xs = self.dmd_source_pos[nr_mirror_x][nr_source][0]
+                ys = self.dmd_source_pos[nr_mirror_x][nr_source][1]
                 r = np.sqrt(np.square(self.X - xs) + np.square(self.Y - ys))
-                phase_shift = self.get_phase_shift_point_source(nr_mirror, nr_source)
+                phase_shift = self.get_phase_shift_point_source(nr_mirror_x, nr_source)
+                if not self.phase_shift:
+                    phase_shift = 0
 
                 # different fields based on the source type
                 if self.source_type == "spherical":
@@ -112,6 +116,8 @@ class Simulation1d:
         # plotting the field profile
         field_profile = self.get_field_profile(field, y)
         plt.plot(np.linspace(-self.field_dimensions[0]/2, self.field_dimensions[0]/2, len(field_profile)), abs(field_profile))
+        plt.xlabel("x")
+        plt.ylabel("intensity")
         plt.show()
     
 
