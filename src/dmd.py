@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Dmd1d:
+class Dmd2d:
     def __init__(self, tilt_angle, mirror_size, mirror_gap, nr_mirrors_x, nr_sources_per_mirror) -> None:
         self.tilt_angle_deg = tilt_angle
         self.tilt_angle_rad = np.deg2rad(tilt_angle)
@@ -50,13 +50,15 @@ class Dmd1d:
         for nr_mirrors_x in range(self.nr_mirrors_x):
             plt.plot([self.get_x(nr_mirrors_x, s) for s in self.mirror_coords_x], [self.get_y(nr_mirrors_x, s) for s in self.mirror_coords_x])
         plt.title("Surface of the dmd")
+        plt.xlabel("x")
+        plt.ylabel("y")
         plt.axis("equal")
         plt.axhline(0, linestyle="dotted", zorder=-1, color="gray")
         plt.tight_layout()
         plt.show()
 
 
-class Dmd2d:
+class Dmd3d:
     def __init__(self, tilt_angle, mirror_size, mirror_gap, nr_mirrors_x, nr_y, nr_sources_per_x, nr_sources_per_y) -> None:
         self.tilt_angle_deg = tilt_angle
         self.tilt_angle_rad = np.deg2rad(tilt_angle)

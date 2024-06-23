@@ -5,8 +5,8 @@ from dmd import Dmd1d, Dmd2d, save_surface
 
 '''Below is the simulation for 1d mirrors.'''
 
-class Simulation1d:
-    def __init__(self, dmd:Dmd1d, incident_angle, wavelength, field_dimensions: tuple, res, source_type="spherical", phase_shift=True) -> None:
+class Simulation2d:
+    def __init__(self, dmd:Dmd2d, incident_angle, wavelength, field_dimensions: tuple, res, source_type="spherical", phase_shift=True) -> None:
         # parameters concerning the dmd
         self.dmd = dmd
         self.dmd_source_pos = dmd.get_source_positions()
@@ -63,7 +63,6 @@ class Simulation1d:
         distance = self.distance_between_sources*nr_source
         mirror_phase = self.get_phase_shift_mirrors(0, nr_mirror_x)
         source_phase = mirror_phase + (np.dot(self.km, self.rm_norm) * distance)
-        # source_phase = 0
         return source_phase  # return phase shift of 0th mirror and current point-source 
     
     def get_total_phases(self):
@@ -121,8 +120,8 @@ class Simulation1d:
         plt.show()
     
 
-class Simulation2d:
-    def __init__(self, dmd:Dmd2d, phi, theta, wavelength, field_dimensions: tuple, res, source_type) -> None:
+class Simulation3d:
+    def __init__(self, dmd:Dmd3d, phi, theta, wavelength, field_dimensions: tuple, res, source_type) -> None:
         self.dmd = dmd
 
         # angles for defining wavevector in spherical coordinates
