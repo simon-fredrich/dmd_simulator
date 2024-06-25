@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from dmd import Dmd1d, Dmd2d, save_surface
+from dmd import Dmd2d, Dmd3d
 
 '''Below is the simulation for 1d mirrors.'''
 
