@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from dmd import Dmd2d, Dmd3d
 
 '''Below is the simulation for 2d mirrors.'''
+
 class Simulation2d:
     def __init__(self, dmd:Dmd2d, incident_angle, wavelength, field_dimensions: tuple, res, source_type="spherical", phase_shift=True) -> None:
         # parameters concerning the dmd
@@ -117,7 +118,7 @@ class Simulation2d:
         plt.ylabel("intensity")
         plt.show()
     
-'''Below is the simulation for 2d mirrors.'''
+'''Below is the simulation for 3d mirrors.'''
 
 class Simulation3d:
     def __init__(self, dmd:Dmd3d, incident_angle, wavelength, field_dimensions: tuple, res, source_type="spherical", if_phase_shift=True) -> None:
