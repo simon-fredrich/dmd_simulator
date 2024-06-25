@@ -187,16 +187,7 @@ def save_surface(surface, path, title, x_label, y_label, z_label):
 
 
 def main():
-    dmd = Dmd1d(0, 10, 1, 5, 10)
-    pos = dmd.get_source_positions()
-    # print(pos[0])
-    for i in pos:
-        x = [i[j][0] for j in range(len(i))]
-        y = [i[j][1] for j in range(len(i))]
-        plt.plot(x, y)
-    plt.show()
-
-
+    pass
 
 if __name__ == "__main__":
     main()
