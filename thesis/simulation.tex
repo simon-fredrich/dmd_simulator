@@ -1,5 +1,5 @@
 \section{Simulation}
-Um die grundlegende Funktionalität des DMDs zu implementieren und die Grundkonzepte der Simulation zu erproben, wird zunächst eine zweidimensionale Simulation erstellt. Darauf aufbauend wird eine dreidimentionale Simulation ausgearbeitet, um experimentelle Ergebnisse nachzustellen oder vorherzusagen.
+Um die grundlegende Funktionalität des DMDs zu implementieren und die Grundkonzepte der Simulation zu erproben, wird zunächst eine zweidimensionale Simulation erstellt. Darauf aufbauend wird eine dreidimensionale Simulation ausgearbeitet, um experimentelle Ergebnisse nachzustellen oder vorherzusagen.
 
 
 \subsection{Zwei Dimensionen}
@@ -7,7 +7,7 @@ In dieser zweidimensionalen Version liegen die Koordinaten des DMD auf der x-Ach
 \subsubsection{Drehung}
 Zu Beginn sind alle Spiegel in dem Zustand „off“ und die Koordinaten der Spiegel $(x_i, y_i)$ liegen auf der x-Achse, also $y_i=0$. Um die Spiegel um den Winkel $\alpha$ zu drehen, müssen die Koordinaten mit der Drehmatrix
 \begin{equation}
-    D_2=\left(\begin{matrix}
+    D_2(\alpha)=\left(\begin{matrix}
         \cos(\alpha) & -\sin(\alpha)\\ 
         \sin(\alpha) & \cos(\alpha)
     \end{matrix}\right)
@@ -30,8 +30,8 @@ transformiert werden. Dazu muss der Koordinatenursprung kurz auf den Mittelpunkt
     \end{aligned}
 \end{equation}
 
-\subsubsection{Phasenverschiebung}
-Die einfallende ebene Welle trifft jeden Punkt der Spiegel des DMDs mit unterschiedlicher Phase. Um die Phase $\Delta\phi_{s}$ zwischen den dem nullten und $j$-ten Spiegel zu berechnen wird die Projektion des Wellenvektors auf die x-Achse
+\subsubsection{Phasenversatz}
+Die einfallende ebene Welle trifft jeden Punkt der Spiegel des DMDs mit unterschiedlicher Phase. Um die Phase $\Delta\phi_{s, j}$ zwischen den dem nullten und $j$-ten Spiegel zu berechnen wird die Projektion des Wellenvektors auf die x-Achse
 \begin{equation}
     \vec{k}_{x} = \left(\vec{k}\cdot\hat{x}\right)\cdot\hat{x}
 \end{equation}
@@ -43,11 +43,11 @@ Die Phase $\Delta\phi_{q}$ entlang der Spiegel zwischen zwei Punktquellen berech
 \begin{equation}
     \vec{k}_{s} = \left(\vec{k}\cdot\hat{r}_{s}\right)\cdot\hat{r}_{s}
 \end{equation}
-und der Vektor zwischen zwei Punktquellen $\vec{r}_q$ genutzt um den Phasenversatz
+und der Vektor zwischen zwei Punktquellen $\vec{r}_q$ genutzt, um den Phasenversatz
 \begin{equation}
     \Delta\phi_{q} = \vec{k}_{s}\cdot \vec{r}_q
 \end{equation}
-zu berechnen.
+dieser zu berechnen.
 
 Der Phasenversatz der $n$-ten Punktquelle des $m$-ten Spiegels wird mit 
 \begin{equation}
@@ -58,3 +58,35 @@ berechnet, womit man dann das Feld an der Koordinate $\vec{r}_i$
     E_{\text{total}, \vec{r}_i}=\sum_{m=0}^{M}\sum_{n=0}^{N}\exp(i(k\cdot r_i+\Delta\phi_{m, n}))
 \end{equation}
 erhält.
+
+\subsection{Drei Dimensionen}
+\subsubsection{Drehung}
+Die Drehung der dreidimensionalen Spiegel ist etwas komplizierter zu berechnen. Diesmal werden zwei Rotationsmatrizen $D_y(\alpha)$ und $D_z(\alpha)$ kombiniert, um die Koordinaten einer Spiegelebene zu erzeugen. Die herkömmlichen Drehmatrizen $D_y(\alpha)$ und $D_z(\alpha)$ haben die Gestalten
+\begin{equation}
+    D_y(\alpha)=\left(\begin{matrix}
+        \cos(\alpha) & 0 & \sin(\alpha) \\
+        0 & 1 & 0 \\ 
+        -\sin(\alpha) & 0 & \cos(\alpha)
+    \end{matrix}\right)\text{ \& }
+    D_z(\alpha)=\left(\begin{matrix}
+        \cos(\alpha) & -\sin(\alpha) & 0 \\
+        \sin(\alpha) & \cos(\alpha) & 0 \\
+        0 & 0 & 1 \\ 
+    \end{matrix}\right).
+\end{equation}
+Mit dem Produkt
+\begin{equation}
+    D_3(\alpha)=D_y(\alpha)\cdot D_z(\alpha)
+\end{equation}
+werden die Spiegelpunkte transformiert.
+
+Die Spiegel werden als Gitter auf dem DMD verteilt.
+\subsubsection{Phasenversatz}
+Glücklicherweise können die Freiheitsgrade des dreidimensionalen Problems reduziert werden und die Berechnung kann analog zum zweidimensionalen Fall ausgeführt werden. Dadurch, dass der Wellenvektor in der xz-Ebene liegt, verschwindet der Phasenversatz entlang der y-Achse. Es wird also wieder die Phase $\Delta\phi_{s, mx, my}$ zwischen dem Spiegel auf Gitterplatz $(0, 0)$ und dem auf Gitterplatz $(mx, my)$ mithilfe der Projektion $\vec{k}_x$ berechnet. Die y-Koordinate des Abstandsvektors $\vec{r}_{0, m}$ der Spiegel wird null gesetzt, weil die dazugehörige Phase ohnehin wegfällt.
+
+Ähnlich verhält es sich für den Phasenversatz entlang der Spiegel. Auch hier wird der Abstand der Punktquelle im Fußpunkt des Spiegels zur $n$-ten Punktquelle für die Berechnung genutzt, wobei ebenfalls die y-Komponente vernachlässigt wird.
+
+Das resultierende Feld an der Koordinate $\vec{r}_i$ erhält man mit
+\begin{equation}
+    E_{\text{total}, \vec{r}_i}=\sum_{m_x=0}^{M_x}\sum_{m_y=0}^{M_y}\sum_{n_x=0}^{N_x}\sum_{n_y=0}^{N_y}\exp(i(k\cdot r_i+\Delta\phi_{m_x, m_y, n_x, n_y}))
+\end{equation}
