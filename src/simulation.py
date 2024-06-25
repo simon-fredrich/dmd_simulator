@@ -1,10 +1,8 @@
 import numpy as np
 from matplotlib import pyplot as plt
-
 from dmd import Dmd2d, Dmd3d
 
-'''Below is the simulation for 1d mirrors.'''
-
+'''Below is the simulation for 2d mirrors.'''
 class Simulation2d:
     def __init__(self, dmd:Dmd2d, incident_angle, wavelength, field_dimensions: tuple, res, source_type="spherical", phase_shift=True) -> None:
         # parameters concerning the dmd
@@ -119,63 +117,100 @@ class Simulation2d:
         plt.ylabel("intensity")
         plt.show()
     
+'''Below is the simulation for 2d mirrors.'''
 
 class Simulation3d:
-    def __init__(self, dmd:Dmd3d, phi, theta, wavelength, field_dimensions: tuple, res, source_type) -> None:
+    def __init__(self, dmd:Dmd3d, incident_angle, wavelength, field_dimensions: tuple, res, source_type="spherical", if_phase_shift=True) -> None:
         self.dmd = dmd
 
-        # angles for defining wavevector in spherical coordinates
-        self.phi_deg = phi
-        self.phi_rad = np.deg2rad(phi)
-        self.theta_deg = theta
-        self.theta_rad = np.deg2rad(theta)
-        self.k = 2 * np.pi / wavelength
-        self.k_vector = self.k * \
-        np.array([np.sin(self.theta_rad)*np.cos(self.phi_rad),
-                  np.sin(self.theta_rad)*np.sin(self.phi_rad), 
-                  np.cos(self.theta_rad)])
+        # incident wave parameters
+        self.wavelength = 1
+        self.k = 2*np.pi/wavelength
+        self.incident_angle_deg = incident_angle
+        self.incident_angle_rad = np.deg2rad(incident_angle)
+
+        # 3d vector in xz-plane
+        self.k_wave = - self.k * np.array([
+            np.sin(self.incident_angle_rad),
+            0,
+            np.cos(self.incident_angle_rad)
+        ])
+
+        # projection of wave vector along x-axis
+        self.x_unit = np.array([1, 0, 0])
+        self.k_x = np.dot(self.k_wave, self.x_unit)*self.x_unit
+
+        # projection of wave vector along mirror
+        self.r_m = np.array([np.cos(dmd.tilt_angle_rad), 0, np.sin(dmd.tilt_angle_rad)])
+        self.k_m = np.dot(self.k_wave, self.r_m)*self.r_m
+
         self.source_type = source_type
+        self.if_phase_shift = if_phase_shift
         self.res = res  # resolution
-        self.pixels_x = res * field_dimensions[0] 
-        self.pixels_y = res * field_dimensions[1]
+        self.pixels_x = int(res * field_dimensions[0])
+        self.pixels_y = int(res * field_dimensions[1])
 
         # define the range where the field should be calculated
         self.x_range = np.linspace(-field_dimensions[0]/2, field_dimensions[0]/2, self.pixels_x)
-        self.y_range = np.linspace(-field_dimensions[0]/2, field_dimensions[0]/2, self.pixels_y)
-        self.X, self.Y = np.meshgrid(self.x_range, self.y_range)
-        self.Z = self.dmd.mirror_size
+        self.z_range = np.linspace(0, field_dimensions[1], self.pixels_y) - dmd.mirror_size/2
+        self.X, self.Z = np.meshgrid(self.x_range, self.z_range)
+        self.Y = np.zeros_like(self.X)
 
-        self.E_incident = np.exp(1j * self.k * (self.X*np.sin(self.theta_rad)*np.cos(self.phi_rad) + self.Y*np.sin(self.theta_rad)*np.sin(self.phi_rad) + self.Z*np.cos(self.theta_rad)))
+        # array to save phase shift values
+        self.phase_shifts = np.zeros((dmd.nr_mirrors, dmd.nr_mirrors, dmd.nr_sources, dmd.nr_sources))
 
-    def get_E_reflected(self, r, phase_shift):
-        return np.exp(1j * (self.k * r + phase_shift))
+    def get_E_incident(self):
+        # calculation of incident field
+        E_incident = np.exp(1j * self.k * (self.X*np.sin(self.incident_angle_rad) + self.Z*np.cos(self.incident_angle_rad)))
+        return E_incident
 
     def get_E_total(self):
-        epsilon = 1e-10
+        epsilon0 = 1e-10
         E_total = np.zeros_like(self.X, dtype=complex)
 
-        for nr_x in range(self.dmd.nr_x):
-            for nr_y in range(self.dmd.nr_y):
-                r0 = self.dmd.get_r0(nr_x, nr_y)  # vector pointing to the main edge of the mirror
-                k_proj = self.dmd.get_projection(nr_x, nr_y, self.k_vector, r0)  # projection of wavevector onto plane
-                # print(k_proj)
-                for s in self.dmd.mirror_coords_x:
-                    for t in self.dmd.mirror_coords_y:
-                        r = np.sqrt(np.square(self.X - self.dmd.get_x(nr_x, nr_y, s, t)) + 
-                                    np.square(self.Y - self.dmd.get_y(nr_x, nr_y, s, t)) + 
-                                    np.square(self.Y - self.dmd.get_z(nr_x, nr_y, s, t)))  # vector pointing to point source
-                        # print(type(r), r)
+        for mx in range(self.dmd.nr_mirrors):
+            for my in range(self.dmd.nr_mirrors):
+                x_rot, y_rot, z_rot = self.dmd.get_coords(mx, my)
+                for sx in range(self.dmd.nr_sources):
+                    for sy in range(self.dmd.nr_sources):
+                        # extract current coordinates
+                        x_coord = x_rot[0, sx, sy]
+                        y_coord = y_rot[0, sx, sy]
+                        z_coord = z_rot[0, sx, sy]
 
-                        phase_shift = self.dmd.get_phase_shift(nr_x, nr_y, s, t, k_proj, r0)  # phase shift of point source
-                        # print(phase_shift)
+                        # calculate phase shift along x-axis
+                        mirror_x0 = x_rot[0, 0, 0]
+                        mirror_x = x_rot[0, sx, sy]
+                        mirror_dist = mirror_x-mirror_x0
+                        mirror_phase = np.dot(self.k_x, self.x_unit)*mirror_dist  # phase shift of current (i-th) mirror y-row
 
-                        # different fields based on the source type
-                        if self.source_type == "spherical":
-                            E_total += self.get_E_reflected(r, phase_shift) / (r + epsilon)
-                        elif self.source_type == "plane":
-                            E_total += self.get_E_reflected(r, phase_shift)
+                        # calculate phase shift along mirror plane
+                        source_dist = np.sqrt(np.square(mirror_x-x_coord)+np.square(z_coord))
+                        source_phase = np.dot(self.k_m, self.r_m)*source_dist  # phase shift of point source
+                        phase_shift = mirror_phase + source_phase
+
+                        # save phase shift
+                        self.phase_shifts[mx, my, sx, sy] = phase_shift
+
+                        # calculate field 
+                        r = np.sqrt(np.square(self.X - x_coord) + np.square(self.Y - y_coord) + np.square(self.Z - z_coord))
+                        E_total += np.exp(1j * (self.k * r + phase_shift))/(r + epsilon0)
         
         return E_total
+    
+    def plot_E_total(self):
+        # Plotting
+        plt.figure(figsize=(12, 6))
+
+        # Plot the real part of the total reflected field
+        plt.contourf(self.X, self.Z, np.log(np.abs(self.get_E_total())), levels=50, cmap='viridis')
+        plt.title('abs(E_total)')
+        plt.xlabel('x')
+        plt.ylabel('z')
+        plt.axis("square")
+
+        plt.tight_layout()
+        plt.show()
 
 
 def show_intensities(intensities):
@@ -188,10 +223,7 @@ def show_intensities(intensities):
 
 
 def main():
-    dmd = Dmd1d(0, 10, 1, 5, 10)
-    sim = Simulation1d(dmd, 90, 1, (10, 10), 1, "spherical")
-    print(sim.get_phase_shift_point_source(1, 0))
-
+    pass
 
 if __name__ == "__main__":
     main()
