@@ -68,9 +68,8 @@ class Dmd3d:
         # construct tilted mirror
         xspan = np.linspace(-mirror_size/2, mirror_size/2, nr_sources)
         yspan = np.linspace(-mirror_size/2, mirror_size/2, nr_sources)
-        zspan = np.zeros_like(xspan)
-        self.rotated_mesh = self.DoRotation3D(xspan, yspan, zspan, RotRadY=self.tilt_angle_rad, RotRadZ=np.deg2rad(45))
-        self.coords = np.zeros((nr_mirrors, nr_mirrors, 3, nr_sources, nr_sources, nr_sources))
+        self.rotated_points = self.do_rotation(xspan, yspan, rot_rad_y=self.tilt_angle_rad)
+        self.coords = np.zeros((nr_mirrors, nr_mirrors, 3, nr_sources, nr_sources))
 
         # quantities
         self.nr_mirrors = nr_mirrors
@@ -79,48 +78,109 @@ class Dmd3d:
         self.size = (mirror_size + mirror_gap) * nr_mirrors - mirror_gap
         self.size_diag = np.sqrt(2)*self.size
 
-    def DoRotation3D(self, xspan, yspan, zspan, RotRadX=0, RotRadY=0, RotRadZ=0):
-        """Generate a 3D meshgrid and rotate it by RotRadX, RotRadY, and RotRadZ radians."""
+    def do_rotation(self, xspan, yspan, rot_rad_x=0, rot_rad_y=0, rot_rad_z=np.deg2rad(45+90)):
+        """Generate a 3D meshgrid and rotate it by rot_rad_x, rot_rad_y, and rot_rad_z radians."""
 
         # Rotation matrices for x, y, and z axes
-        RotMatrixX = np.array([[1, 0, 0],
-                            [0, np.cos(RotRadX), -np.sin(RotRadX)],
-                            [0, np.sin(RotRadX), np.cos(RotRadX)]])
+        rot_matrix_x = np.array([[1, 0, 0],
+                            [0, np.cos(rot_rad_x), -np.sin(rot_rad_x)],
+                            [0, np.sin(rot_rad_x), np.cos(rot_rad_x)]])
         
-        RotMatrixY = np.array([[np.cos(RotRadY), 0, np.sin(RotRadY)],
+        rot_matrix_y = np.array([[np.cos(rot_rad_y), 0, np.sin(rot_rad_y)],
                             [0, 1, 0],
-                            [-np.sin(RotRadY), 0, np.cos(RotRadY)]])
+                            [-np.sin(rot_rad_y), 0, np.cos(rot_rad_y)]])
         
-        RotMatrixZ = np.array([[np.cos(RotRadZ), -np.sin(RotRadZ), 0],
-                            [np.sin(RotRadZ), np.cos(RotRadZ), 0],
+        rot_matrix_z = np.array([[np.cos(rot_rad_z), -np.sin(rot_rad_z), 0],
+                            [np.sin(rot_rad_z), np.cos(rot_rad_z), 0],
                             [0, 0, 1]])
 
-        # Combined rotation matrix
-        RotMatrix = RotMatrixY @ RotMatrixZ
+        D3 = np.dot(rot_matrix_y, rot_matrix_z)
 
         # Create a 3D meshgrid
-        x, y, z = np.meshgrid(xspan, yspan, zspan, indexing='ij')
+        X, Y = np.meshgrid(xspan, yspan)
+        Z = np.zeros_like(X)
 
-        # Stack the meshgrid arrays into a single 4D array
-        grid = np.stack([x, y, z], axis=-1)
+        # Apply rotation to the grid points
+        X_flat = X.flatten()
+        Y_flat = Y.flatten()
+        Z_flat = Z.flatten()
 
-        # Apply the rotation matrix
-        rotated_grid = np.einsum('ij,klmj->klmi', RotMatrix, grid)
+        points = np.vstack((X_flat, Y_flat, Z_flat))
+        rotated_points = np.dot(D3, points)
 
-        return rotated_grid
+        X_rotated = rotated_points[0, :].reshape(X.shape)
+        Y_rotated = rotated_points[1, :].reshape(Y.shape)
+        Z_rotated = rotated_points[2, :].reshape(Z.shape)
+
+        return X_rotated, Y_rotated, Z_rotated
+    
+    def get_x(self, mx, my):
+        return self.rotated_points[0] + np.sqrt(2)/2*(self.mirror_size+self.mirror_gap)*(mx - my)
+    
+    def get_y(self, mx, my):
+        return self.rotated_points[1] + np.sqrt(2)/2*(self.mirror_size+self.mirror_gap)*(mx + my + 1) - self.size_diag/2
+    
+    def get_z(self, mx, my):
+        return self.rotated_points[2]
     
     def get_coords(self, mx, my):
         # Extract the rotated coordinates and arrange them onto dmd plane
-        x_rot = self.rotated_mesh[..., 0] + np.sqrt(2)/2*(self.mirror_size+self.mirror_gap)*(mx - my)
-        y_rot = self.rotated_mesh[..., 1] + np.sqrt(2)/2*(self.mirror_size+self.mirror_gap)*(mx + my + 1) - self.size_diag/2
-        z_rot = self.rotated_mesh[..., 2]
+        x = self.get_x(mx, my)
+        y = self.get_y(mx, my)
+        z = self.get_z(mx, my)
 
         # save position for later use
-        self.coords[mx, my, 0] = x_rot
-        self.coords[mx, my, 1] = y_rot
-        self.coords[mx, my, 2] = z_rot
+        self.coords[mx, my, 0] = x
+        self.coords[mx, my, 1] = y
+        self.coords[mx, my, 2] = z
 
-        return x_rot, y_rot, z_rot
+        return x, y, z
+    
+    def plot(self, show_info=False):
+        from plotly.offline import init_notebook_mode, iplot
+        import plotly.graph_objs as go
+        init_notebook_mode(connected=True)
+
+        fig = go.Figure()
+        for mx in range(self.nr_mirrors):
+            for my in range(self.nr_mirrors):
+                x = self.get_x(mx, my)
+                y = self.get_y(mx, my)
+                z = self.get_z(mx, my)
+
+                x0 = x.flatten()[0]
+                y0 = y.flatten()[0]
+                z0 = z.flatten()[0]
+
+                mirror = go.Surface(x=x, y=y, z=z, showscale=(True if (mx == 0 and my == 0) else False))
+                fig.add_trace(mirror)
+                if show_info:
+                    fig.add_trace(
+                        go.Scatter3d(x=[x0],
+                                    y=[y0],
+                                    z=[z0],
+                                    mode='markers+text',
+                                    marker=dict(
+                                            size=2,
+                                            colorscale='Viridis',   # choose a colorscale
+                                            opacity=0.8),
+                                    text=f"{mx}, {my}",
+                                    showlegend=False
+                        )
+                    )
+        
+        # Set y-axis limits
+        fig.update_layout(
+            scene=dict(
+                zaxis=dict(
+                    range=[-self.size, self.size]  # Set the z-axis range
+                )
+            ),
+            title='DMD Surface view', autosize=False,
+            width=500, height=500,
+            margin=dict(l=65, r=50, b=65, t=90)
+        )
+        iplot(fig)
 
 def main():
     pass
