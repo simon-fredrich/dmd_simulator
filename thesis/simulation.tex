@@ -64,9 +64,9 @@ erhält.
 Die Drehung der dreidimensionalen Spiegel ist etwas komplizierter zu berechnen. Diesmal werden zwei Rotationsmatrizen $D_y(\alpha)$ und $D_z(\alpha)$ kombiniert, um die Koordinaten einer Spiegelebene zu erzeugen. Die herkömmlichen Drehmatrizen $D_y(\alpha)$ und $D_z(\alpha)$ haben die Gestalten
 \begin{equation}
     D_y(\alpha)=\left(\begin{matrix}
-        \cos(\alpha) & 0 & \sin(\alpha) \\
+        \cos(\alpha) & 0 & -\sin(\alpha) \\
         0 & 1 & 0 \\ 
-        -\sin(\alpha) & 0 & \cos(\alpha)
+        \sin(\alpha) & 0 & \cos(\alpha)
     \end{matrix}\right)\text{ \& }
     D_z(\alpha)=\left(\begin{matrix}
         \cos(\alpha) & -\sin(\alpha) & 0 \\
