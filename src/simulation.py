@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from dmd import Dmd2d, Dmd3d
 import time
 from scipy.fftpack import fft, fftfreq, fft2, ifft2, fftshift, ifftshift
+from joblib import Parallel, delayed
 
 '''Below is the simulation for 2d mirrors.'''
 
@@ -93,9 +94,11 @@ class Simulation2d:
 class Simulation3d:
     def __init__(self, dmd:Dmd3d, incident_angle_deg, wavelength, if_phase_shift=True) -> None:
         self.dmd = dmd
+        self.phase_origin = np.array([-np.sqrt(2)/2*dmd.d_size, 0, 0])
 
         # incident wave parameters
         self.k = 2*np.pi/wavelength
+        self.incident_angle_deg = incident_angle_deg
         self.incident_angle_rad = np.deg2rad(incident_angle_deg)
 
         # 3d vector in xz-plane
@@ -128,6 +131,36 @@ class Simulation3d:
         E_incident = np.exp(1j * self.k * (X*np.sin(self.incident_angle_rad) + Z*np.cos(self.incident_angle_rad)))
         return E_incident
     
+    def compute_phase_shift_and_contribution(self, mi, mj, X, Y, Z, epsilon0):
+        offset_x, offset_y = self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1]
+
+        D3 = np.dot(self.dmd.rot_matrix_y(self.dmd.pattern[mi, mj]*self.dmd.tilt_angle_rad), self.dmd.rot_matrix_z(self.dmd.rot_rad_z))
+        x_rot, y_rot, z_rot = np.dot(D3, np.vstack([self.dmd.X.flatten(), self.dmd.Y.flatten(), self.dmd.Z.flatten()]))
+
+        X_rot = x_rot.reshape(self.dmd.X.shape) - offset_x
+        Y_rot = y_rot.reshape(self.dmd.Y.shape) - offset_y
+        Z_rot = z_rot.reshape(self.dmd.Z.shape)
+
+        E_total_local = np.zeros_like(X, dtype=complex)
+        points_local = []
+        phases_local = []
+
+        for si in range(self.dmd.nr_s):
+            for sj in range(self.dmd.nr_s):
+                # changing the y value of vector to point source
+                p = np.array([X_rot[si, sj], Y_rot[si, sj], Z_rot[si, sj]]) - self.phase_origin
+                p_abs = np.linalg.norm(p)
+                k_p = np.dot(self.k_wave, p) * p / np.square(p_abs)
+                phase_shift = np.dot(k_p, p) % (2 * np.pi)
+
+                points_local.append([X_rot[si, sj], Y_rot[si, sj], Z_rot[si, sj]])
+                phases_local.append(phase_shift)
+
+                r = np.sqrt(np.square(X - X_rot[si, sj]) + np.square(Y - Y_rot[si, sj]) + np.square(Z - Z_rot[si, sj]))
+                E_total_local += np.exp(1j * (self.k * r + phase_shift)) / (r + epsilon0)
+
+        return E_total_local, points_local, phases_local
+    
     def get_E_reflected(self, width=0, depth=0, height=0, res=1, cr_plane="xz", y_value=0, z_value=0, source_type="spherical"):
         pixels_x, pixels_y, pixels_z = self.get_quality((width, depth, height), res)
 
@@ -152,36 +185,9 @@ class Simulation3d:
 
         epsilon0 = 1e-10
         E_total = np.zeros_like(X, dtype=complex)
-        phase_origin = np.array([-np.sqrt(2)/2*self.dmd.d_size, 0, 0])
-        for mi in range(self.dmd.nr_m):
-            for mj in range(self.dmd.nr_m):
-                offset_x, offset_y = self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1]
-
-                # rotate mirror 
-                D3 = np.dot(self.dmd.rot_matrix_y(self.dmd.pattern[mi, mj]*self.dmd.tilt_angle_rad), self.dmd.rot_matrix_z(self.dmd.rot_rad_z))
-                x_rot, y_rot, z_rot = np.dot(D3, np.vstack([self.dmd.X.flatten(), self.dmd.Y.flatten(), self.dmd.Z.flatten()]))
-
-                # shift mirror to position on grid
-                X_rot = x_rot.reshape(self.dmd.X.shape) - offset_x
-                Y_rot = y_rot.reshape(self.dmd.Y.shape) - offset_y
-                Z_rot = z_rot.reshape(self.dmd.Z.shape)
-                
-                for si in range(self.dmd.nr_s):
-                    for sj in range(self.dmd.nr_s):
-                        # calculate phase shift
-                        p = np.array([X_rot[si, sj], 0, Z_rot[si, sj]])-phase_origin
-                        p_abs = np.linalg.norm(p)
-                        k_p = np.dot(self.k_wave, p)*p/np.square(p_abs)
-                        phase_shift = np.dot(k_p, p)%(2*np.pi)
-
-                        # save points & phases
-                        self.points.append([X_rot[si, sj], Y_rot[si, sj], Z_rot[si, sj]])
-                        self.phases.append(phase_shift)
-
-                        # add source contribution to total field
-                        r = np.sqrt(np.square(X - X_rot[si, sj]) + np.square(Y - Y_rot[si, sj]) + np.square(Z - Z_rot[si, sj]))
-                        # TODO: source type
-                        E_total += np.exp(1j * (self.k * r + phase_shift))/(r + epsilon0)
+        results = Parallel(n_jobs=8, verbose=10)(delayed(self.compute_phase_shift_and_contribution)(mi, mj, X, Y, Z, epsilon0) for mi in range(self.dmd.nr_m) for mj in range(self.dmd.nr_m))
+        E_total_local, points_local, phases_local = zip(*results)
+        for E in E_total_local: E_total += E
         return E_total, x_range, y_range, z_range
     
     def get_fft(self, E_total, x_range, y_range):
@@ -195,6 +201,15 @@ class Simulation3d:
         KX, KY = np.meshgrid(kx, ky)
         angles = np.arctan2(KY, KX)  # Angles of outgoing directions
         return fft_magnitude, kx, ky
+    
+    def apply_aperture(self, field, x_range, y_range, aperture_constant):
+        xx, yy=np.meshgrid(
+            np.linspace(np.min(x_range), np.max(x_range), field.shape[0]),
+            np.linspace(np.min(y_range), np.max(y_range), field.shape[1])
+        )
+        aperture = np.ones_like(xx)
+        aperture[xx**2+yy**2>=aperture_constant**2]=0
+        return field*aperture
 
 
 def show_intensities(intensities):
@@ -207,7 +222,46 @@ def show_intensities(intensities):
 
 
 def main():
-    pass
+    import numpy as np
+
+    # initiate dmd
+    dmd = Dmd3d(
+        tilt_angle_deg=12,
+        m_size=5.4, 
+        m_gap=5.4e-1, 
+        nr_m=5,
+        nr_s=20,
+        pattern=np.ones((5, 5))
+    )
+
+    sim = Simulation3d(
+        dmd=dmd,
+        incident_angle_deg=-24,
+        wavelength=532e-3,
+        if_phase_shift=True
+    )
+
+    E_total_xy, X, Y, Z = sim.get_E_reflected(cr_plane="xy", width=100, depth=100, z_value=30, res=4)
+    E_fft, kx, ky = sim.get_fft(E_total_xy, X, Y)
+
+    import plotly.express as px
+
+    # Create the heatmap with Plotly Express
+    fig = px.imshow(
+        E_fft,                   # Magnitude values for the heatmap
+        x=np.linspace(-np.min(kx), np.max(kx), 100),                    # Spatial frequency values for x-axis
+        y=np.linspace(-np.min(ky), np.max(ky), 100),                    # Spatial frequency values for y-axis
+        color_continuous_scale='Viridis',  # Color scale
+        labels={'x': 'Spatial Frequency (kx)', 'y': 'Spatial Frequency (ky)', 'color': 'Magnitude'},  # Labels
+        title="FFT Magnitude",
+        width=800,
+        height=800
+    )
+
+    # Show the figure
+    fig.show()
+
+
 
 if __name__ == "__main__":
     main()

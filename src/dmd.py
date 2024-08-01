@@ -76,6 +76,7 @@ class Dmd3d:
         # angles
         self.tilt_angle_rad = np.deg2rad(tilt_angle_deg)
         self.rot_rad_z = np.deg2rad(-45)
+
         
     
     def create_grid(self):
@@ -138,7 +139,8 @@ class Dmd3d:
         iplot(fig)
 
 def main():
-    pass
+    dmd=Dmd3d(12, 10, 1, 10, 10, np.ones((10, 10)))
+    dmd.create_mirror()
 
 if __name__ == "__main__":
     main()
