@@ -1,1 +1,4 @@
 notebooks
+src/__pycache__
+.venv
+figures
