@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from metadata import MetaData
 from plotly.offline import init_notebook_mode, iplot
 import plotly.graph_objs as go
 init_notebook_mode(connected=True)
@@ -60,25 +61,43 @@ class Dmd2d:
 
 
 class Dmd3d:
-    def __init__(self, tilt_angle_deg, m_size, m_gap, nr_m, nr_s, pattern) -> None:
+    def __init__(self, meta:MetaData) -> None:
         # dmd
-        self.nr_m = nr_m
-        self.nr_s = nr_s
-        self.m_size = m_size
-        self.m_gap = m_gap
-        self.d_size = (m_size+m_gap)*nr_m-m_gap
+        self.nr_m = meta.nr_m
+        self.nr_s = meta.nr_s
+        self.m_size = meta.m_size
+        self.m_gap = meta.m_gap
+        self.d_size = (meta.m_size+meta.m_gap)*meta.nr_m-meta.m_gap
         self.grid = self.create_grid()
-        self.pattern = pattern
+        self.pattern = meta.pattern
 
         # mirror
         self.X, self.Y, self.Z = self.create_mirror()
 
         # angles
-        self.tilt_angle_rad = np.deg2rad(tilt_angle_deg)
+        self.tilt_angle_rad = np.deg2rad(meta.tilt_angle_deg)
         self.rot_rad_z = np.deg2rad(-45)
 
+        # self.positions=self.compute_positions()
         
+    def compute_position(self, mi, mj):
+        DY=self.rot_matrix_y(self.tilt_angle_rad*self.pattern[mi, mj])
+        DZ=self.rot_matrix_z(self.rot_rad_z)
+        D3=np.dot(DY, DZ)
+        X, Y, Z=np.dot(D3, np.vstack([self.X.flatten(),
+                                    self.Y.flatten(),
+                                    self.Z.flatten()]))
+        return (X.reshape(self.X.shape)+self.grid[mi, mj][0],
+                Y.reshape(self.Y.shape)+self.grid[mi, mj][1],
+                Z.reshape(self.Z.shape))
     
+    def compute_positions(self):
+        positions=np.zeros(shape=(self.nr_m, self.nr_m, 3, self.nr_s, self.nr_s))
+        for mi in range(self.nr_m):
+            for mj in range(self.nr_m):
+                positions[mi, mj][0], positions[mi, mj][1], positions[mi, mj][2]=self.compute_position(mi, mj)
+        return positions
+
     def create_grid(self):
         grid = np.zeros(shape=(self.nr_m, self.nr_m, 2))
         x0 = np.array([np.sqrt(2)/2*(self.m_size-self.d_size), 0])
@@ -112,7 +131,7 @@ class Dmd3d:
             [0, 0, 1]])
         return rot_matrix_z
 
-    def plot(self, path="../out/default_3d.png"):
+    def plot(self, path="../figures/default_3d.png"):
         surface_data = []
         scatter_data = []
         for mi in range(self.nr_m):
