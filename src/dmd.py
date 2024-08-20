@@ -80,8 +80,8 @@ class Dmd3d:
 
         # self.positions=self.compute_positions()
         
-    def compute_position(self, mi, mj):
-        DY=self.rot_matrix_y(self.tilt_angle_rad*self.pattern[mi, mj])
+    def compute_position(self, mi, mj, tilt_state):
+        DY=self.rot_matrix_y(self.tilt_angle_rad*tilt_state)
         DZ=self.rot_matrix_z(self.rot_rad_z)
         D3=np.dot(DY, DZ)
         X, Y, Z=np.dot(D3, np.vstack([self.X.flatten(),

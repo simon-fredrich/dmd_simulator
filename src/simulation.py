@@ -100,6 +100,7 @@ class Simulation3d:
     def __init__(self, dmd:Dmd3d, meta, if_phase_shift=True) -> None:
         self.dmd = dmd
         self.phase_origin = np.array([-np.sqrt(2)/2*dmd.d_size, 0, 0])
+        self.pattern = meta.pattern
 
         # incident wave parameters
         self.k = 2*np.pi/meta.wavelength
@@ -113,54 +114,6 @@ class Simulation3d:
             0,
             np.cos(self.incident_angle_rad)
         ])
-
-        self.if_phase_shift = if_phase_shift
-        self.points = []
-        self.phases = []
-        # self.phase_shift=self.compute_phase_shift()
-
-    def compute_partial_E_initial(self, screen, dmd_pos, si, sj):
-        sx, sy, sz = dmd_pos  # coordinates of point sources from zeroth mirror (initial mirror)
-        X, Y, Z=screen
-        rm = np.array([sx[si, sj] - sx[0, 0], sy[si, sj] - sy[0, 0], sz[si, sj] - sz[0, 0]])  # vector pointing towards point source from initial point source
-        source_phase = np.dot(self.k_wave, rm)  # phase shift between zeroth (initial) point source and current point source
-        r = np.sqrt((X - sx[si, sj]) ** 2 + (Y - sy[si, sj]) ** 2 + (Z - sz[si, sj]) ** 2)  # distance between position of current point source and position of complex field
-        return np.exp(1j * (self.k * r + source_phase)) / r
-
-    # def get_E_initial(self, X, Y, Z, mi, mj):
-    #     E_initial=np.zeros_like(X, dtype=complex)
-    #     sx, sy, sz=self.dmd.compute_position(mi, mj)  # coordinates of point sources from zeroth mirror (initial mirror)
-    #     for si in range(self.dmd.nr_s):
-    #         for sj in range(self.dmd.nr_s):
-    #             rm=np.array([sx[si, sj]-sx[0, 0], sy[si, sj]-sy[0, 0], sz[si, sj]-sz[0, 0]])  # vector pointing towards point source from initial point source
-    #             source_phase=np.dot(self.k_wave, rm)  # phase shift between zeroth (initital) point source and current point source
-    #             r=np.sqrt((X-sx[si, sj])**2+(Y-sy[si, sj])**2+(Z-sz[si, sj])**2)  # distance between position of current point source and position of complex field
-    #             E_initial+=np.exp(1j*(self.k*r+source_phase))/r
-    #     return E_initial
-
-    # def get_E_initial(self, X, Y, Z, mi, mj):
-    #     E_initial = np.zeros_like(X, dtype=complex)
-        
-    #     # Create a list of all (si, sj) combinations
-    #     tasks = [(X, Y, Z, mi, mj, si, sj) for si in range(self.dmd.nr_s) for sj in range(self.dmd.nr_s)]
-        
-    #     with Pool() as pool:
-    #         results = pool.map(self.compute_partial_E_initial, tasks)
-        
-    #     # Sum all the partial results
-    #     for result in results:
-    #         E_initial += result
-            
-    #     return E_initial
-
-    # def compute_partial_E_initial(self, p0, pi, Field):
-    #     X, Y, Z=Field
-    #     x0, y0, z0=p0
-    #     x, y, z=pi
-    #     rm = np.array([x-x0, y-y0, z-z0])  # vector pointing towards point source from initial point source
-    #     source_phase = np.dot(self.k_wave, rm)  # phase shift between zeroth (initial) point source and current point source
-    #     r = np.sqrt((X - x) ** 2 + (Y - y) ** 2 + (Z - z) ** 2)  # distance between position of current point source and position of complex field
-    #     return np.exp(1j * (self.k * r + source_phase)) / r
 
     def compute_field(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
         screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
@@ -176,10 +129,9 @@ class Simulation3d:
 
         return total_field
 
-    
     def compute_initial_field(self, screen:Screen, mi, mj) -> ComplexField:
         initial_field = ComplexField(screen)
-        source_pos = self.dmd.compute_position(mi, mj)
+        source_pos = self.dmd.compute_position(mi, mj, self.pattern[mi, mj])
         x0, y0, z0=0, 0, 0
         for idx, (xi, yi, zi) in enumerate(zip(source_pos[0].flatten(), source_pos[1].flatten(), source_pos[2].flatten())):
             if idx==0:
@@ -199,139 +151,8 @@ class Simulation3d:
         phase_shifted_field=initial_field.copy()
         phase_shifted_field.multiply(np.exp(1j*mirror_phase))
 
-        return phase_shifted_field
+        return phase_shifted_field    
 
-    def get_E_initial(self, screen, mi, mj):
-        E_initial = np.zeros_like(screen[0], dtype=complex)
-        dmd_pos = self.dmd.compute_position(mi, mj)
-        x0, y0, z0=0, 0, 0
-        for idx, (xi, yi, zi) in enumerate(zip(dmd_pos[0].flatten(), dmd_pos[1].flatten(), dmd_pos[2].flatten())):
-            if idx==0:
-                x0, y0, z0=xi, yi, zi
-            phase_shift=self.k_wave[0]*(xi-x0)+self.k_wave[1]*(yi-y0)+self.k_wave[2]*(zi-z0)
-            r=np.sqrt(np.square(screen[0]-xi) + np.square(screen[1]-yi) + np.square(screen[2]-zi))
-            E_initial+=np.exp(1j * (self.k*r + phase_shift))
-
-        return E_initial
-    
-    def get_E_total(self, pixels: int,
-                    x_interval: tuple[int, int], y_interval: tuple[int, int], z: float):
-        x_min, x_max=x_interval
-        y_min, y_max=y_interval
-        screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
-
-        E_total=np.zeros_like(screen.X, dtype=complex)
-        E_initial=self.get_E_initial(screen, self.dmd.nr_m//2, self.dmd.nr_m//2)
-
-        for mi in range(self.dmd.nr_m):
-            for mj in range(self.dmd.nr_m):
-                E_total+=self.get_mirror_contribution(mi, mj, E_initial)
-        return E_total
-
-    def compute_phase_shift(self):
-        phase_shift=np.zeros(shape=(self.dmd.nr_m, self.dmd.nr_m, self.dmd.nr_s, self.dmd.nr_s))
-        for mi in range(self.dmd.nr_m):
-            for mj in range(self.dmd.nr_m):
-                for si in range(self.dmd.nr_s):
-                    for sj in range(self.dmd.nr_s):
-                        p=np.array([self.dmd.positions[mi, mj, 0, si, sj],
-                                     self.dmd.positions[mi, mj, 1, si, sj],
-                                     self.dmd.positions[mi, mj, 2, si, sj]])-self.phase_origin
-                        p_abs=np.abs(p)
-                        k_p=np.dot(self.k_wave, p)*p/np.square(p_abs)
-                        phase_shift[mi, mj, si, sj]=np.dot(k_p, p)%(2*np.pi)
-        return phase_shift
-        
-
-        for si in range(self.dmd.nr_s):
-            for sj in range(self.dmd.nr_s):
-                # changing the y value of vector to point source
-                p = np.array([X_rot[si, sj], Y_rot[si, sj], Z_rot[si, sj]]) - self.phase_origin
-                p_abs = np.linalg.norm(p)
-                k_p = np.dot(self.k_wave, p) * p / np.square(p_abs)
-                phase_shift = np.dot(k_p, p) % (2 * np.pi)
-
-                points_local.append([X_rot[si, sj], Y_rot[si, sj], Z_rot[si, sj]])
-                phases_local.append(phase_shift)
-
-    def get_quality(self, dim, res):
-        pixels_x = int(res * dim[0])
-        pixels_y = int(res * dim[1])
-        pixels_z = int(res * dim[2])
-        return pixels_x, pixels_y, pixels_z
-
-    def get_E_incident(self, width, height, res=1):
-        dim = (width, 0, height)
-        pixels_x, _, pixels_z = self.get_quality(dim, res)
-        
-        # define the range where the field should be calculated
-        x_range = np.linspace(-dim[0]/2, dim[0]/2, pixels_x)
-        z_range = np.linspace(0, dim[2], pixels_z) - self.dmd.m_size/2
-        X, Z = np.meshgrid(x_range, z_range)
-
-        # calculation of incident field
-        E_incident = np.exp(1j * self.k * (X*np.sin(self.incident_angle_rad) + Z*np.cos(self.incident_angle_rad)))
-        return E_incident
-    
-    def compute_phase_shift_and_contribution(self, mi, mj, X, Y, Z, epsilon0):
-        offset_x, offset_y = self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1]
-
-        D3 = np.dot(self.dmd.rot_matrix_y(self.dmd.pattern[mi, mj]*self.dmd.tilt_angle_rad), self.dmd.rot_matrix_z(self.dmd.rot_rad_z))
-        x_rot, y_rot, z_rot = np.dot(D3, np.vstack([self.dmd.X.flatten(), self.dmd.Y.flatten(), self.dmd.Z.flatten()]))
-
-        X_rot = x_rot.reshape(self.dmd.X.shape) - offset_x
-        Y_rot = y_rot.reshape(self.dmd.Y.shape) - offset_y
-        Z_rot = z_rot.reshape(self.dmd.Z.shape)
-
-        E_total_local = np.zeros_like(X, dtype=complex)
-        points_local = []
-        phases_local = []
-
-        for si in range(self.dmd.nr_s):
-            for sj in range(self.dmd.nr_s):
-                # changing the y value of vector to point source
-                p = np.array([X_rot[si, sj], Y_rot[si, sj], Z_rot[si, sj]]) - self.phase_origin
-                p_abs = np.linalg.norm(p)
-                k_p = np.dot(self.k_wave, p) * p / np.square(p_abs)
-                phase_shift = np.dot(k_p, p) % (2 * np.pi)
-
-                points_local.append([X_rot[si, sj], Y_rot[si, sj], Z_rot[si, sj]])
-                phases_local.append(phase_shift)
-
-                r = np.sqrt(np.square(X - X_rot[si, sj]) + np.square(Y - Y_rot[si, sj]) + np.square(Z - Z_rot[si, sj]))
-                E_total_local += np.exp(1j * (self.k * r + phase_shift)) / (r + epsilon0)
-
-        return E_total_local, points_local, phases_local
-    
-    def get_E_reflected(self, width=0, depth=0, height=0, res=1, cr_plane="xz", y_value=0, z_value=0, source_type="spherical"):
-        pixels_x, pixels_y, pixels_z = self.get_quality((width, depth, height), res)
-
-        # define the range where the field should be calculated
-        x_range = np.zeros((pixels_x))
-        y_range = np.zeros((pixels_y))
-        z_range = np.zeros((pixels_z))
-        X, Y, Z = None, None, None
-
-        # determine field coordinates
-        if cr_plane=="xz":
-            x_range = np.linspace(-width/2, width/2, pixels_x)
-            z_range = np.linspace(0, height, pixels_z) - self.dmd.m_size
-            X, Z = np.meshgrid(x_range, z_range)
-            Y = np.ones_like(X) * (y_value)
-        elif cr_plane=="xy":
-            x_range = np.linspace(-width/2, width/2, pixels_x)
-            y_range = np.linspace(-depth/2, depth/2, pixels_y)
-            X, Y = np.meshgrid(x_range, y_range)
-            Z = np.ones_like(X) * (z_value)
-        else: ValueError(cr_plane + " is not valid. Try 'xy' or 'xz'.")
-
-        epsilon0 = 1e-10
-        E_total = np.zeros_like(X, dtype=complex)
-        results = Parallel(n_jobs=8, verbose=10)(delayed(self.compute_phase_shift_and_contribution)(mi, mj, X, Y, Z, epsilon0) for mi in range(self.dmd.nr_m) for mj in range(self.dmd.nr_m))
-        E_total_local, points_local, phases_local = zip(*results)
-        for E in E_total_local: E_total += E
-        return E_total, x_range, y_range, z_range
-    
     def get_fft(self, E_total, x_range, y_range):
         X, Y = np.meshgrid(x_range, y_range)
         fft_field = fftshift(fft2(E_total))
@@ -352,49 +173,4 @@ class Simulation3d:
         aperture = np.ones_like(xx)
         aperture[xx**2+yy**2>=aperture_constant**2]=0
         return field*aperture
-
-
-def main():
-    import numpy as np
-
-    # initiate dmd
-    dmd = Dmd3d(
-        tilt_angle_deg=12,
-        m_size=5.4, 
-        m_gap=5.4e-1, 
-        nr_m=5,
-        nr_s=20,
-        pattern=np.ones((5, 5))
-    )
-
-    sim = Simulation3d(
-        dmd=dmd,
-        incident_angle_deg=-24,
-        wavelength=532e-3,
-        if_phase_shift=True
-    )
-
-    E_total_xy, X, Y, Z = sim.get_E_reflected(cr_plane="xy", width=100, depth=100, z_value=30, res=4)
-    E_fft, kx, ky = sim.get_fft(E_total_xy, X, Y)
-
-    import plotly.express as px
-
-    # Create the heatmap with Plotly Express
-    fig = px.imshow(
-        E_fft,                   # Magnitude values for the heatmap
-        x=np.linspace(-np.min(kx), np.max(kx), 100),                    # Spatial frequency values for x-axis
-        y=np.linspace(-np.min(ky), np.max(ky), 100),                    # Spatial frequency values for y-axis
-        color_continuous_scale='Viridis',  # Color scale
-        labels={'x': 'Spatial Frequency (kx)', 'y': 'Spatial Frequency (ky)', 'color': 'Magnitude'},  # Labels
-        title="FFT Magnitude",
-        width=800,
-        height=800
-    )
-
-    # Show the figure
-    fig.show()
-
-
-
-if __name__ == "__main__":
-    main()
+    
