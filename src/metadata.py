@@ -11,13 +11,8 @@ class MetaData:
         self.pattern=np.ones((self.nr_m, self.nr_m))
         self.wavelength=0.5
 
-        # default screen parameters
-        self.screen_pixels=128
-        self.screen_x_min=-(self.m_size+self.m_gap)*self.nr_m/2
-        self.screen_x_max=(self.m_size+self.m_gap)*self.nr_m/2
-        self.screen_y_min=-(self.m_size+self.m_gap)*self.nr_m/2
-        self.screen_y_max=(self.m_size+self.m_gap)*self.nr_m/2
-        self.screen_z=np.sqrt(2)/2*self.m_size*np.sin(self.tilt_angle_deg)
-
         # default simulation parameters
         self.incident_angle_deg=0
+
+    def update_pattern(self):
+        self.pattern=np.ones((self.nr_m, self.nr_m))
