@@ -87,9 +87,9 @@ class Dmd3d:
         X, Y, Z=np.dot(D3, np.vstack([self.X.flatten(),
                                     self.Y.flatten(),
                                     self.Z.flatten()]))
-        return (X.reshape(self.X.shape)+self.grid[mi, mj][0],
+        return np.array([X.reshape(self.X.shape)+self.grid[mi, mj][0],
                 Y.reshape(self.Y.shape)+self.grid[mi, mj][1],
-                Z.reshape(self.Z.shape))
+                Z.reshape(self.Z.shape)])
     
     def compute_positions(self):
         positions=np.zeros(shape=(self.nr_m, self.nr_m, 3, self.nr_s, self.nr_s))

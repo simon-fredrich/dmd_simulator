@@ -21,10 +21,10 @@ class ComplexField:
         return np.abs(self.mesh)**2
     
     def add(self, value) -> None:
-        self.mesh+=value
+        np.add(self.mesh, value, out=self.mesh)
     
     def multiply(self, value) -> None:
-        self.mesh*=value
+        np.multiply(self.mesh, value, out=self.mesh)
 
     def copy(self) -> 'ComplexField':
         copy=ComplexField(self.screen)
