@@ -7,8 +7,20 @@ from complex_field import ComplexField
 import time
 from scipy.fftpack import fft, fftfreq, fft2, ifft2, fftshift, ifftshift
 from joblib import Parallel, delayed
+# import itertools
+import logging
+import multiprocessing
 from multiprocessing import Pool
-import itertools
+
+def configure_logging():
+    logger = multiprocessing.get_logger()
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(processName)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+logging.basicConfig(filename='simulation.log', level=logging.INFO, format='%(asctime)s - %(message)s')
 
 '''Below is the simulation for 2d mirrors.'''
 
@@ -120,20 +132,18 @@ class Simulation3d:
         self.initial_field_off: ComplexField
 
     def init_tilt_state_fields(self, screen) -> None:
-        m_index=self.dmd.nr_m//2
+        configure_logging()  # Ensure logging is configured
+        m_index = self.dmd.nr_m // 2
 
-        if np.all(self.pattern==1):
-            print("Calculate initial field for 'on' state.")
-            self.initial_field_on=self.compute_initial_field(screen, m_index, m_index, 1)
-        elif np.all(self.pattern==0):
-            print("Calculate initial field for 'off' state.")
-            self.initial_field_off=self.compute_initial_field(screen, m_index, m_index, -1)
+        if np.all(self.pattern == 1):
+            logging.info("Calculate initial field for 'on' state.")
+            self.initial_field_on = self.compute_initial_field(screen, m_index, m_index, 1)
+        elif np.all(self.pattern == 0):
+            logging.info("Calculate initial field for 'off' state.")
+            self.initial_field_off = self.compute_initial_field(screen, m_index, m_index, -1)
         else:
-            print("Calculate initial fields for 'on' & 'off' state.")
-            # self.initial_field_on, self.initial_field_off = Parallel(n_jobs=2, backend="threading")(
-            #     delayed(self.compute_initial_field)(screen, m_index, m_index, tilt_state)
-            #     for tilt_state in [1, -1]
-            # )
+            logging.info("Calculate initial fields for 'on' & 'off' state.")
+
             with Pool(processes=2) as pool:
                 results = pool.starmap(self.compute_initial_field, [
                     (screen, m_index, m_index, 1),
@@ -159,15 +169,15 @@ class Simulation3d:
         return total_field
 
     def compute_initial_field(self, screen:Screen, mi, mj, tilt_state) -> ComplexField:
-        initial_field = ComplexField(screen)
-        source_pos = self.dmd.compute_position(mi, mj, tilt_state)
-        x0, y0, z0=0, 0, 0
-        for idx, (xi, yi, zi) in enumerate(zip(source_pos[0].flatten(), source_pos[1].flatten(), source_pos[2].flatten())):
-            if idx==0:
-                x0, y0, z0=xi, yi, zi
-            phase_shift=self.k_wave[0]*(xi-x0)+self.k_wave[1]*(yi-y0)+self.k_wave[2]*(zi-z0)
-            r=np.sqrt(np.square(screen.X-xi) + np.square(screen.Y-yi) + np.square(screen.Z-zi))
-            initial_field.add(np.exp(1j * (self.k*r + phase_shift))/r)
+        # initial_field = ComplexField(screen)
+        # source_pos = self.dmd.compute_position(mi, mj, tilt_state)
+        # x0, y0, z0=0, 0, 0
+        # for idx, (xi, yi, zi) in enumerate(zip(source_pos[0].flatten(), source_pos[1].flatten(), source_pos[2].flatten())):
+        #     if idx==0:
+        #         x0, y0, z0=xi, yi, zi
+        #     phase_shift=self.k_wave[0]*(xi-x0)+self.k_wave[1]*(yi-y0)+self.k_wave[2]*(zi-z0)
+        #     r=np.sqrt(np.square(screen.X-xi) + np.square(screen.Y-yi) + np.square(screen.Z-zi))
+        #     initial_field.add(np.exp(1j * (self.k*r + phase_shift))/r)
 
         # initial_field = ComplexField(screen)
         # source_pos = self.dmd.compute_position(mi, mj, tilt_state)
@@ -179,6 +189,26 @@ class Simulation3d:
         #             (screen.Y - source_pos[1])**2 +
         #             (screen.Z - source_pos[2])**2)
         # initial_field.add(np.exp(1j * (self.k * r + phase_shift)) / r)
+
+        initial_field = ComplexField(screen)
+        source_pos = self.dmd.compute_position(mi, mj, tilt_state)
+        x0, y0, z0 = 0, 0, 0
+        total_points = len(source_pos[0].flatten())
+
+        logging.info(f"Computing initial field for mirror ({mi}, {mj}) with tilt state {tilt_state}...")
+
+        for idx, (xi, yi, zi) in enumerate(zip(source_pos[0].flatten(), source_pos[1].flatten(), source_pos[2].flatten())):
+            if idx == 0:
+                x0, y0, z0 = xi, yi, zi
+            phase_shift = self.k_wave[0] * (xi - x0) + self.k_wave[1] * (yi - y0) + self.k_wave[2] * (zi - z0)
+            r = np.sqrt(np.square(screen.X - xi) + np.square(screen.Y - yi) + np.square(screen.Z - zi))
+            initial_field.add(np.exp(1j * (self.k * r + phase_shift)) / r)
+
+            # Log progress every 10% of completion
+            if (idx + 1) % (total_points // 10) == 0 or idx == total_points - 1:
+                logging.info(f"Progress: {(idx + 1) / total_points:.0%} complete")
+
+        logging.info(f"Finished computing initial field for mirror ({mi}, {mj}) with tilt state {tilt_state}.\n")
 
         return initial_field
     
