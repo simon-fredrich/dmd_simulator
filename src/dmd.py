@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from metadata import MetaData
 from plotly.offline import init_notebook_mode, iplot
 import plotly.graph_objs as go
-init_notebook_mode(connected=True)
+# init_notebook_mode(connected=True)
 
 
 class Dmd2d:

@@ -20,7 +20,7 @@ def configure_logging():
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-logging.basicConfig(filename='simulation.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 '''Below is the simulation for 2d mirrors.'''
 
@@ -131,6 +131,8 @@ class Simulation3d:
         self.initial_field_on: ComplexField
         self.initial_field_off: ComplexField
 
+        logging.info(meta.output())
+
     def init_tilt_state_fields(self, screen) -> None:
         configure_logging()  # Ensure logging is configured
         m_index = self.dmd.nr_m // 2
@@ -144,12 +146,16 @@ class Simulation3d:
         else:
             logging.info("Calculate initial fields for 'on' & 'off' state.")
 
-            with Pool(processes=2) as pool:
-                results = pool.starmap(self.compute_initial_field, [
-                    (screen, m_index, m_index, 1),
-                    (screen, m_index, m_index, -1)
-                ])
-                self.initial_field_on, self.initial_field_off = results
+            # with Pool(processes=2) as pool:
+            #     results = pool.starmap(self.compute_initial_field, [
+            #         (screen, m_index, m_index, 1),
+            #         (screen, m_index, m_index, -1)
+            #     ])
+            #     self.initial_field_on, self.initial_field_off = results
+
+            self.initial_field_on, self.initial_field_off=\
+                self.compute_initial_field(screen, m_index, m_index, 1),\
+                self.compute_initial_field(screen, m_index, m_index, -1)
 
     def compute_field(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
         screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
@@ -157,7 +163,10 @@ class Simulation3d:
 
         # Compute initial fields based on pattern/hologram
         self.init_tilt_state_fields(screen)
+        total_mirrors = self.dmd.nr_m*self.dmd.nr_m
+        counter=0
         
+        logging.info(f"Shifting initial field over {self.dmd.nr_m}x{self.dmd.nr_m} mirror-grid to construct total field.")
         for mi in range(self.dmd.nr_m):
             for mj in range(self.dmd.nr_m):
                 grid_x, grid_y=self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1]
@@ -165,6 +174,15 @@ class Simulation3d:
                     self.compute_mirror_contribution(mi, mj, self.initial_field_off)
                 mirror_field.shift(grid_x, grid_y)
                 total_field.mesh+=mirror_field.mesh
+
+                # Log progress every 10% of completion
+                if total_mirrors>=10:
+                    if (counter + 1) % (total_mirrors // 10) == 0 or counter == total_mirrors - 1:
+                        logging.info(f"Progress: {(counter + 1) / total_mirrors:.0%} complete")
+                    counter+=1
+
+        logging.info("Complete shifting.\n")
+
 
         return total_field
 
@@ -221,19 +239,7 @@ class Simulation3d:
         phase_shifted_field=initial_field.copy()
         phase_shifted_field.multiply(np.exp(1j*mirror_phase))
 
-        return phase_shifted_field    
-
-    def get_fft(self, E_total, x_range, y_range):
-        X, Y = np.meshgrid(x_range, y_range)
-        fft_field = fftshift(fft2(E_total))
-        fft_magnitude = np.abs(fft_field)
-
-        # Calculate the spatial frequency coordinates
-        kx = np.fft.fftfreq(len(x_range), d=(X[0, 1] - X[0, 0]))
-        ky = np.fft.fftfreq(len(y_range), d=(Y[1, 0] - Y[0, 0]))
-        KX, KY = np.meshgrid(kx, ky)
-        angles = np.arctan2(KY, KX)  # Angles of outgoing directions
-        return fft_magnitude, kx, ky
+        return phase_shifted_field
     
     def apply_aperture(self, field, x_range, y_range, aperture_constant):
         xx, yy=np.meshgrid(

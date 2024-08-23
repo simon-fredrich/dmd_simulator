@@ -88,10 +88,32 @@ class ComplexField:
         plt.colorbar()
         plt.title('Real part of ComplexField')
         plt.show()
-    
-    # def shift(self, shift_x, shift_y):
-    #     self.screen.x_max+=shift_x
-    #     self.screen.x_min+=shift_x
-    #     self.screen.y_max+=shift_y
-    #     self.screen.y_min+=shift_y
-    #     self.screen.update()
+
+    def fft(self) -> tuple['ComplexField', np.ndarray, np.ndarray]:
+        """
+        Perform a 2D Fourier transform on the complex field and return a tuple of:
+        - A new ComplexField object containing the Fourier-transformed field.
+        - The frequency axes in the x and y directions.
+        """
+        # Perform the 2D Fourier transform
+        transformed_mesh = np.fft.fft2(self.mesh)
+
+        # Shift the zero frequency component to the center
+        transformed_mesh = np.fft.fftshift(transformed_mesh)
+
+        # Calculate the frequency axes
+        dx = (self.screen.x_max - self.screen.x_min) / self.screen.pixels
+        dy = (self.screen.y_max - self.screen.y_min) / self.screen.pixels
+
+        freq_x = np.fft.fftfreq(self.shape[1], d=dx)
+        freq_y = np.fft.fftfreq(self.shape[0], d=dy)
+
+        # Shift the frequencies to match the transformed data
+        freq_x = np.fft.fftshift(freq_x)
+        freq_y = np.fft.fftshift(freq_y)
+
+        # Create a new ComplexField to hold the transformed field
+        transformed_field = ComplexField(self.screen)
+        transformed_field.mesh = transformed_mesh
+
+        return transformed_field, freq_x, freq_y

@@ -1,5 +1,6 @@
 from metadata import MetaData
 import numpy as np
+import matplotlib.pyplot as plt
 
 class Hologram():
     def __init__(self, meta:MetaData) -> None:
@@ -9,12 +10,27 @@ class Hologram():
         self.amplitude: float
         self.X, self.Y=np.ogrid[0:self.nr_m:self.nr_m*1j,\
                                 0:self.nr_m:self.nr_m*1j]
+        self.H: np.ndarray
 
-    def create(self, phase, amplitude):
+    def create(self, lambda_x, lambda_y, phase, amplitude):
         self.phase=phase
         self.amplitude=amplitude
+        self.lambda_x=lambda_x
+        self.lambda_y=lambda_y
         H=1/2*1/2*np.sign(
-            np.cos(2*np.pi/self.wavelength*(self.X+self.Y)+phase)-
+            np.cos(2*np.pi*(self.X/lambda_x+self.Y/lambda_y)+phase)-
             np.cos(np.arcsin(amplitude)))
-        return H
         
+        self.H=H
+        return H
+    
+    def display(self):
+        plt.imshow(self.H, cmap=plt.cm.gray)
+        plt.show()
+        
+
+    def pattern_on(self):
+        return np.ones((self.nr_m, self.nr_m))
+    
+    def pattern_off(self):
+        return np.zeros((self.nr_m, self.nr_m))

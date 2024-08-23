@@ -13,14 +13,17 @@ class SimulationSaver:
     def save_plot(self, field, x_range, y_range, filename, plot_type='real', cmap='viridis'):
         """Speichert das gegebene Feld als Bilddatei."""
         if plot_type == 'real':
-            field_to_plot = np.real(field)
+            field_to_plot = field.real()
             title = "Real Part"
         elif plot_type == 'imag':
-            field_to_plot = np.imag(field)
+            field_to_plot = field.real()
             title = "Imaginary Part"
         elif plot_type == 'abs':
-            field_to_plot = np.abs(field)
+            field_to_plot = field.abs()
             title = "Magnitude"
+        elif plot_type == 'fft':
+            field_to_plot = field.fft()
+            title = "FFT Amplitude"
         else:
             raise ValueError("Invalid plot_type. Choose 'real', 'imag', or 'abs'.")
 
@@ -39,7 +42,7 @@ class SimulationSaver:
     def save_data(self, data, filename):
         """Speichert das gegebene Feld als NumPy-Datei."""
         filepath = os.path.join(self.base_dir, filename)
-        np.save(filepath, data)
+        np.save(filepath, data.mesh)
         print(f"Data saved at {filepath}")
 
     def save_metadata(self, meta: MetaData, filename):
@@ -48,10 +51,11 @@ class SimulationSaver:
             'tilt_angle_deg': meta.tilt_angle_deg,
             'm_size': meta.m_size,
             'm_gap': meta.m_gap,
-            'nr_m': meta.nr_m,
-            'nr_s': meta.nr_s,
-            'pattern': meta.pattern.tolist(),  # Konvertiere NumPy-Array in eine Liste
+            'nr_m': f"{meta.nr_m}x{meta.nr_m}",
+            'nr_s': f"{meta.nr_s}x{meta.nr_s}",
+            'pattern': meta.pattern.shape,
             'wavelength': meta.wavelength,
+            "pixels:": f"{meta.pixels}x{meta.pixels}",
             'incident_angle_deg': meta.incident_angle_deg
         }
         
@@ -68,6 +72,7 @@ class SimulationSaver:
 
         # Speichere Plot
         self.save_plot(field, x_range, y_range, plot_filename, plot_type='abs')
+        self.save_plot(field, x_range, y_range, plot_filename, plot_type='fft')
         
         # Speichere Rohdaten
         self.save_data(field, data_filename)
