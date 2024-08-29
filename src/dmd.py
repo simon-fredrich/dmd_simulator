@@ -62,6 +62,37 @@ class Dmd2d:
 
 class Dmd3d:
     def __init__(self, meta:MetaData) -> None:
+        """
+        Initialize a Dmd3d object from a MetaData object.
+
+        Parameters
+        ----------
+        meta : MetaData
+            A MetaData object containing the parameters for the DMD.
+
+        Attributes
+        ----------
+        nr_m : int
+            The number of mirrors in the x and y-direction.
+        nr_s : int
+            The number of mirror elements in the x and y-direction.
+        m_size : float
+            The size of each mirror element in the x and y-direction.
+        m_gap : float
+            The gap between each mirror element in the x and y-direction.
+        d_size : float
+            The total size of the DMD in the x and y-direction.
+        grid : array
+            An array containing the positions of each mirror element.
+        pattern : array
+            A 2D array containing the pattern to be projected onto the DMD.
+        X, Y, Z : array
+            2D arrays containing the positions of point sources within the initial mirror.
+        tilt_angle_rad : float
+            The tilt angle of the DMD in radians.
+        rot_rad_z : float
+            The rotation angle of the DMD in the z-direction in radians.
+        """
         # dmd
         self.nr_m = meta.nr_m
         self.nr_s = meta.nr_s
@@ -81,6 +112,23 @@ class Dmd3d:
         # self.positions=self.compute_positions()
         
     def compute_position(self, mi, mj, tilt_state):
+        """
+        Compute the position of a single mirror in the DMD array.
+
+        Parameters
+        ----------
+        mi : int
+            x-index of the mirror in the array
+        mj : int
+            y-index of the mirror in the array
+        tilt_state : int
+            tilt state of the mirror (0 or 1)
+
+        Returns
+        -------
+        position : np.ndarray
+            (3, nr_s, nr_s) array of the position of the mirror
+        """
         DY=self.rot_matrix_y(self.tilt_angle_rad*tilt_state)
         DZ=self.rot_matrix_z(self.rot_rad_z)
         D3=np.dot(DY, DZ)
@@ -92,6 +140,14 @@ class Dmd3d:
                 Z.reshape(self.Z.shape)])
     
     def compute_positions(self):
+        """
+        Compute the positions of all mirrors in the DMD array.
+
+        Returns
+        -------
+        positions : np.ndarray
+            (nr_m, nr_m, 3, nr_s, nr_s) array of the positions of the mirrors
+        """
         positions=np.zeros(shape=(self.nr_m, self.nr_m, 3, self.nr_s, self.nr_s))
         for mi in range(self.nr_m):
             for mj in range(self.nr_m):
@@ -99,6 +155,21 @@ class Dmd3d:
         return positions
 
     def create_grid(self):
+        """
+        Compute the positions of the grid points of the DMD array.
+
+        The grid points are arranged in a hexagonal lattice, with the first
+        point at the origin. The x and y coordinates of the grid points are
+        computed as follows:
+
+        x = sqrt(2)/2 * (m_size - d_size) + mi * sqrt(2)/2 * (m_size + m_gap)
+        y = mj * sqrt(2)/2 * (m_size + m_gap)
+
+        Returns
+        -------
+        grid : np.ndarray
+            (nr_m, nr_m, 2) array of the positions of the grid points
+        """
         grid = np.zeros(shape=(self.nr_m, self.nr_m, 2))
         x0 = np.array([np.sqrt(2)/2*(self.m_size-self.d_size), 0])
         f = np.sqrt(2)/2*(self.m_size+self.m_gap)
@@ -111,6 +182,17 @@ class Dmd3d:
         return grid
     
     def create_mirror(self):
+        """
+        Compute the positions of the mirror surface points.
+
+        The x and y coordinates are computed with np.linspace and the
+        z coordinates are set to zero.
+
+        Returns
+        -------
+        X, Y, Z : np.ndarray
+            X, Y, Z coordinates of the mirror surface points
+        """
         x = np.linspace(-self.m_size/2, self.m_size/2, self.nr_s)
         y = np.linspace(-self.m_size/2, self.m_size/2, self.nr_s)
         X, Y = np.meshgrid(x, y)
@@ -118,6 +200,20 @@ class Dmd3d:
         return X, Y, Z
 
     def rot_matrix_y(self, angle):
+        """
+        Compute the rotation matrix for a rotation around the y-axis by a given angle.
+
+        Parameters
+        ----------
+        angle : float
+            Angle in radians
+
+        Returns
+        -------
+        rot_matrix_y : np.ndarray
+            3x3 rotation matrix
+        """
+        
         rot_matrix_y = np.array(
             [[np.cos(angle), 0, -np.sin(angle)],
             [0, 1, 0],
@@ -125,6 +221,19 @@ class Dmd3d:
         return rot_matrix_y
         
     def rot_matrix_z(self, angle):
+        """
+        Compute the rotation matrix for a rotation around the z-axis by a given angle.
+
+        Parameters
+        ----------
+        angle : float
+            Angle in radians
+
+        Returns
+        -------
+        rot_matrix_z : np.ndarray
+            3x3 rotation matrix
+        """
         rot_matrix_z = np.array(
             [[np.cos(angle), -np.sin(angle), 0],
             [np.sin(angle), np.cos(angle), 0],
