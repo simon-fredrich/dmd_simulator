@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from screen import Screen
+from scipy.fft import fft2, fftshift, fftfreq
 
 class ComplexField:
     def __init__(self, screen: Screen) -> None:
@@ -31,7 +32,7 @@ class ComplexField:
         copy.mesh=self.mesh
         return copy
     
-    def shift(self, shift_x: int, shift_y: int) -> None:
+    def shift(self, shift_x: float, shift_y: float) -> None:
         """
         Shift the mesh by shift_x in the x direction and shift_y in the y direction.
         Positive values shift the mesh right/up, negative values shift the mesh left/down.
@@ -75,11 +76,11 @@ class ComplexField:
         self.mesh = shifted_mesh
 
         # Update the screen dimensions
-        self.screen.x_max+=shift_x
-        self.screen.x_min+=shift_x
-        self.screen.y_max+=shift_y
-        self.screen.y_min+=shift_y
-        self.screen.update()
+        # self.screen.x_max+=shift_x
+        # self.screen.x_min+=shift_x
+        # self.screen.y_max+=shift_y
+        # self.screen.y_min+=shift_y
+        # self.screen.update()
 
     def display(self) -> None:
         """ A simple method to visualize the real part of the field."""
@@ -96,21 +97,22 @@ class ComplexField:
         - The frequency axes in the x and y directions.
         """
         # Perform the 2D Fourier transform
-        transformed_mesh = np.fft.fft2(self.mesh)
+        transformed_mesh = fft2(self.mesh)
+        fft_field = fftshift(fft2(self.mesh))
 
         # Shift the zero frequency component to the center
-        transformed_mesh = np.fft.fftshift(transformed_mesh)
+        transformed_mesh = fftshift(transformed_mesh)
 
         # Calculate the frequency axes
-        dx = (self.screen.x_max - self.screen.x_min) / self.screen.pixels
-        dy = (self.screen.y_max - self.screen.y_min) / self.screen.pixels
+        # dx = (self.screen.x_max - self.screen.x_min) / self.screen.pixels
+        # dy = (self.screen.y_max - self.screen.y_min) / self.screen.pixels
 
-        freq_x = np.fft.fftfreq(self.shape[1], d=dx)
-        freq_y = np.fft.fftfreq(self.shape[0], d=dy)
+        freq_x = fftfreq(self.shape[1])#, d=dx)
+        freq_y = fftfreq(self.shape[0])#, d=dy)
 
         # Shift the frequencies to match the transformed data
-        freq_x = np.fft.fftshift(freq_x)
-        freq_y = np.fft.fftshift(freq_y)
+        # freq_x = fftshift(freq_x)
+        # freq_y = fftshift(freq_y)
 
         # Create a new ComplexField to hold the transformed field
         transformed_field = ComplexField(self.screen)
