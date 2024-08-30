@@ -210,14 +210,15 @@ class Simulation3d:
 
         initial_field = ComplexField(screen)
         source_pos = self.dmd.compute_position(mi, mj, tilt_state)
-        x0, y0, z0 = 0, 0, 0
+        # x0, y0 = self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2]
+        x0, y0, z0=self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1], 0
         total_points = len(source_pos[0].flatten())
 
-        logging.info(f"Computing initial field for mirror ({mi}, {mj}) with tilt state {tilt_state}...")
+        logging.info(f"Computing initial field for mirror at grid-position ({mi}, {mj}) with tilt state {tilt_state}...")
 
         for idx, (xi, yi, zi) in enumerate(zip(source_pos[0].flatten(), source_pos[1].flatten(), source_pos[2].flatten())):
-            if idx == 0:
-                x0, y0, z0 = xi, yi, zi
+            # if idx == 0:
+            #     x0, y0, z0 = xi, yi, zi
             phase_shift = self.k_wave[0] * (xi - x0) + self.k_wave[1] * (yi - y0) + self.k_wave[2] * (zi - z0)
             r = np.sqrt(np.square(screen.X - xi) + np.square(screen.Y - yi) + np.square(screen.Z - zi))
             initial_field.add(np.exp(1j * (self.k * r + phase_shift)) / r)
@@ -226,20 +227,56 @@ class Simulation3d:
             if (idx + 1) % (total_points // 10) == 0 or idx == total_points - 1:
                 logging.info(f"Progress: {(idx + 1) / total_points:.0%} complete")
 
-        logging.info(f"Finished computing initial field for mirror ({mi}, {mj}) with tilt state {tilt_state}.\n")
+        logging.info(f"Finished computing initial field for mirror at grid-position ({mi}, {mj}) with tilt state {tilt_state}.\n")
 
         return initial_field
     
     def compute_mirror_contribution(self, mi, mj, initial_field) -> ComplexField:
         kx=self.k_wave[0]  # projection of wavevector onto x-axis
-        dx=self.dmd.grid[mi, mj, 0] - self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2, 0]  # distance of x-position of mirror to origin
-        dy=self.dmd.grid[mi, mj, 1] - self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2, 1]  # distance of y-position of mirror to origin
-        mirror_phase=kx*dx
+        ky=self.k_wave[1]  # projection of wavevector onto y-axis
+        dx=self.dmd.grid[mi, mj, 0]  #- self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2, 0]  # distance of x-position of mirror to origin
+        dy=self.dmd.grid[mi, mj, 1]  #- self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2, 1]  # distance of y-position of mirror to origin
+        mirror_phase=np.dot(self.k_wave, np.array([dx, dy, 0]))%(2*np.pi)
 
         phase_shifted_field=initial_field.copy()
         phase_shifted_field.multiply(np.exp(1j*mirror_phase))
 
         return phase_shifted_field
+    
+    def get_quality(self, dim, res):
+        pixels_x = int(res * dim[0])
+        pixels_y = int(res * dim[1])
+        pixels_z = int(res * dim[2])
+        return pixels_x, pixels_y, pixels_z
+    
+    def get_E_reflected(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
+        screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
+
+        epsilon0 = 1e-10
+        E_total = ComplexField(screen)#np.zeros_like(X, dtype=complex)
+        phase_origin = np.array([-np.sqrt(2)/2*self.dmd.d_size, 0, 0])
+        for mi in range(self.dmd.nr_m):
+            for mj in range(self.dmd.nr_m):
+                offset_x, offset_y = self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1]
+
+                # shift mirror to position on grid
+                X_mirror = self.dmd.X - offset_x
+                Y_mirror = self.dmd.Y - offset_y
+                Z_mirror = self.dmd.Z
+                
+                for si in range(self.dmd.nr_s):
+                    for sj in range(self.dmd.nr_s):
+                        # calculate phase shift
+                        p = np.array([X_mirror[si, sj], Y_mirror[si, sj], Z_mirror[si, sj]])-phase_origin
+                        p_abs = np.linalg.norm(p)
+                        k_p = np.dot(self.k_wave, p)*p/np.square(p_abs)
+                        phase_shift = np.dot(k_p, p)%(2*np.pi)
+
+                        # add source contribution to total field
+                        r = np.sqrt(np.square(screen.X - X_mirror[si, sj]) + np.square(screen.Y - Y_mirror[si, sj]) + np.square(screen.Z - Z_mirror[si, sj]))
+                        # TODO: source type
+                        E_total.mesh += np.exp(1j * (self.k * r + phase_shift))/(r + epsilon0)
+        return E_total
     
     def apply_aperture(self, field, x_range, y_range, aperture_constant):
         xx, yy=np.meshgrid(
