@@ -14,6 +14,8 @@ class MetaData:
 
         # default simulation parameters
         self.incident_angle_deg=0
+        
+        self.computing_time=None
 
     def update_pattern(self):
         self.pattern=np.ones((self.nr_m, self.nr_m))
