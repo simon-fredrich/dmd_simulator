@@ -13,6 +13,23 @@ class Hologram():
         self.H: np.ndarray
 
     def create(self, lambda_x, lambda_y, phase, amplitude):
+        """
+        Create a binary hologram with the given parameters.
+
+        Parameters
+        ----------
+        lambda_x, lambda_y : float
+            Spatial frequencies in the x and y directions.
+        phase : float
+            Phase of the hologram.
+        amplitude : float
+            Amplitude of the hologram.
+
+        Returns
+        -------
+        H : numpy array
+            The hologram pattern.
+        """
         self.phase=phase
         self.amplitude=amplitude
         self.lambda_x=lambda_x
