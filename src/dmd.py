@@ -155,21 +155,6 @@ class Dmd3d:
         return positions
 
     def create_grid(self):
-        """
-        Compute the positions of the grid points of the DMD array.
-
-        The grid points are arranged in a hexagonal lattice, with the first
-        point at the origin. The x and y coordinates of the grid points are
-        computed as follows:
-
-        x = sqrt(2)/2 * (m_size - d_size) + mi * sqrt(2)/2 * (m_size + m_gap)
-        y = mj * sqrt(2)/2 * (m_size + m_gap)
-
-        Returns
-        -------
-        grid : np.ndarray
-            (nr_m, nr_m, 2) array of the positions of the grid points
-        """
         grid = np.zeros(shape=(self.nr_m, self.nr_m, 2))
         x0 = np.array([np.sqrt(2)/2*(self.m_size-self.d_size), 0])
         f = np.sqrt(2)/2*(self.m_size+self.m_gap)
@@ -180,6 +165,18 @@ class Dmd3d:
                 pos = x0 + mi*row + mj*col
                 grid[mi, mj] = pos
         return grid
+    
+    def show_grid(self):
+        """
+        Plot the grid points of the DMD array.
+
+        Returns
+        -------
+        None
+        """
+        plt.scatter(self.grid[:, :, 0], self.grid[:, :, 1])
+        plt.axis("equal")
+        plt.show()
     
     def create_mirror(self):
         """
