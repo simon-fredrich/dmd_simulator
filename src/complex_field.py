@@ -1,7 +1,7 @@
 import numpy as np
+from numpy.fft import fftfreq, fftshift, fft2
 import matplotlib.pyplot as plt
 from screen import Screen
-from scipy.fft import fft2, fftshift, fftfreq
 
 class ComplexField:
     def __init__(self, screen: Screen) -> None:
