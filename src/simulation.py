@@ -1,12 +1,12 @@
 import numpy as np
+from numpy.fft import fft2, ifft2, fftshift, ifftshift, fftfreq
 from matplotlib import pyplot as plt
 from dmd import Dmd2d, Dmd3d
 from metadata import MetaData
 from screen import Screen
 from complex_field import ComplexField
 import time
-from scipy.fftpack import fft, fftfreq, fft2, ifft2, fftshift, ifftshift
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 # import itertools
 import logging
 import multiprocessing
