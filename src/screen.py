@@ -10,6 +10,8 @@ class Screen:
         self.y_range=np.linspace(y_min, y_max, pixels)
         self.X, self.Y=np.meshgrid(self.x_range, self.y_range)
         self.Z=np.ones_like(self.X)*z
+        self.x_label="x"
+        self.y_lable="y"
 
     def update(self):
         self.x_range=np.linspace(self.x_min, self.x_max, self.pixels)
@@ -23,3 +25,29 @@ class Screen:
         print(f"x: [{self.x_min}, {self.x_max}]")
         print(f"y: [{self.y_min}, {self.y_max}]")
         print(f"z: {self.z}")
+
+class VerticalScreen:
+    def __init__(self, pixels:int, x_min:float, x_max:float, z_min:float, z_max:float, y:float) -> None:
+        self.pixels=pixels
+        self.x_min, self.x_max=x_min, x_max
+        self.z_min, self.z_max=z_min, z_max
+        self.y=y
+        self.x_range=np.linspace(x_min, x_max, pixels)
+        self.z_range=np.linspace(z_min, z_max, pixels)
+        self.X, self.Z=np.meshgrid(self.x_range, self.z_range)
+        self.Y=np.ones_like(self.X)*y
+        self.x_label="x"
+        self.y_label="z"
+
+    def update(self):
+        self.x_range=np.linspace(self.x_min, self.x_max, self.pixels)
+        self.z_range=np.linspace(self.z_min, self.z_max, self.pixels)
+        self.X, self.Z=np.meshgrid(self.x_range, self.z_range)
+        self.Y=np.ones_like(self.X)*self.y
+
+    def properties(self) -> None:
+        print("Screen Parameters: ")
+        print(f"resolution: {self.pixels}x{self.pixels}")
+        print(f"x: [{self.x_min}, {self.x_max}]")
+        print(f"z: [{self.z_min}, {self.z_max}]")
+        print(f"y: {self.y}")
