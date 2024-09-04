@@ -34,7 +34,7 @@ class Hologram():
         self.amplitude=amplitude
         self.lambda_x=lambda_x
         self.lambda_y=lambda_y
-        H=1/2*1/2*np.sign(
+        H=1/2+1/2*np.sign(
             np.cos(2*np.pi*(self.X/lambda_x+self.Y/lambda_y)+phase)-
             np.cos(np.arcsin(amplitude)))
         
@@ -51,3 +51,7 @@ class Hologram():
     
     def pattern_off(self):
         return np.zeros((self.nr_m, self.nr_m))
+    
+    def grating(self, period):
+        return 1/2+1/2*np.sign(np.cos(2*np.pi/period*(self.X+self.Y)))
+    
