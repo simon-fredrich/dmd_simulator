@@ -8,6 +8,7 @@ class ComplexField:
         self.mesh=np.zeros_like(screen.X, dtype=complex)
         self.shape=self.mesh.shape
         self.screen=screen
+        self.phase_shifts=np.zeros((3, self.shape[0]*self.shape[1]))
 
     def imag(self):
         return self.mesh.imag

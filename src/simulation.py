@@ -187,27 +187,6 @@ class Simulation3d:
         return total_field
 
     def compute_initial_field(self, screen:Screen, mi, mj, tilt_state) -> ComplexField:
-        # initial_field = ComplexField(screen)
-        # source_pos = self.dmd.compute_position(mi, mj, tilt_state)
-        # x0, y0, z0=0, 0, 0
-        # for idx, (xi, yi, zi) in enumerate(zip(source_pos[0].flatten(), source_pos[1].flatten(), source_pos[2].flatten())):
-        #     if idx==0:
-        #         x0, y0, z0=xi, yi, zi
-        #     phase_shift=self.k_wave[0]*(xi-x0)+self.k_wave[1]*(yi-y0)+self.k_wave[2]*(zi-z0)
-        #     r=np.sqrt(np.square(screen.X-xi) + np.square(screen.Y-yi) + np.square(screen.Z-zi))
-        #     initial_field.add(np.exp(1j * (self.k*r + phase_shift))/r)
-
-        # initial_field = ComplexField(screen)
-        # source_pos = self.dmd.compute_position(mi, mj, tilt_state)
-        # x0, y0, z0 = source_pos[:, 0, 0]
-        # phase_shift = (self.k_wave[0] * (source_pos[0] - x0) +
-        #             self.k_wave[1] * (source_pos[1] - y0) +
-        #             self.k_wave[2] * (source_pos[2] - z0))
-        # r = np.sqrt((screen.X - source_pos[0])**2 +
-        #             (screen.Y - source_pos[1])**2 +
-        #             (screen.Z - source_pos[2])**2)
-        # initial_field.add(np.exp(1j * (self.k * r + phase_shift)) / r)
-
         initial_field = ComplexField(screen)
         source_pos = self.dmd.compute_position(mi, mj, tilt_state)
         # x0, y0 = self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2]
@@ -217,9 +196,11 @@ class Simulation3d:
         logging.info(f"Computing initial field for mirror at grid-position ({mi}, {mj}) with tilt state {tilt_state}...")
 
         for idx, (xi, yi, zi) in enumerate(zip(source_pos[0].flatten(), source_pos[1].flatten(), source_pos[2].flatten())):
-            # if idx == 0:
-            #     x0, y0, z0 = xi, yi, zi
-            phase_shift = self.k_wave[0] * (xi - x0) + self.k_wave[1] * (yi - y0) + self.k_wave[2] * (zi - z0)
+            phase_shift = self.k_wave[0] * (xi - x0) + self.k_wave[1] * (yi - y0) + self.k_wave[2] * (zi - z0)%(2*np.pi)
+            initial_field.phase_shifts[0, idx]=xi
+            initial_field.phase_shifts[1, idx]=yi
+            initial_field.phase_shifts[2, idx]=phase_shift
+
             r = np.sqrt(np.square(screen.X - xi) + np.square(screen.Y - yi) + np.square(screen.Z - zi))
             initial_field.add(np.exp(1j * (self.k * r + phase_shift)) / r)
 
