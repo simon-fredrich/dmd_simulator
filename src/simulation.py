@@ -147,7 +147,7 @@ class Simulation3d:
         elif tilt_state==0:
             xi, yi, zi=self.dmd.off_positions[0][si, sj], self.dmd.off_positions[1][si, sj], self.dmd.off_positions[2][si, sj]
         else:
-            raise ValueError("Tilt state must be 1 or -1.")
+            raise ValueError("Tilt state must be 0 ('off') or 1 ('on').")
 
         return ( self.k_wave[0] * (xi - x0) + self.k_wave[1] * (yi - y0) + self.k_wave[2] * (zi - z0) )%(2*np.pi)
 
@@ -166,7 +166,27 @@ class Simulation3d:
         y_coords=np.linspace(0, self.dmd.m_size, self.dmd.nr_s)
         X, Y=np.meshgrid(x_coords, y_coords)
 
-        plt.pcolormesh(X, Y, phase_accross_mirror, shading='auto', cmap='viridis')
+        mesh=plt.pcolormesh(X, Y, phase_accross_mirror, shading='auto', cmap='viridis')
+        # Add the colorbar
+        cbar = plt.colorbar(mesh)
+
+        # Set the label for the colorbar
+        cbar.set_label("Phasenversatz (radians)")
+
+        # Set the ticks on the colorbar to multiples of pi
+        cbar_ticks = [0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi]
+        cbar.set_ticks(cbar_ticks)
+        
+        # Format the ticks as multiples of pi, correctly showing 3π/2 as '3π/2'
+        cbar.ax.yaxis.set_major_formatter(ticker.FuncFormatter(
+            lambda val, pos: (
+                r"$0$" if val == 0 else
+                r"$\frac{\pi}{2}$" if np.isclose(val, np.pi/2) else
+                r"$\pi$" if np.isclose(val, np.pi) else
+                r"$\frac{3\pi}{2}$" if np.isclose(val, 3*np.pi/2) else
+                r"$2\pi$"
+            )
+        ))
         plt.xlabel("x")
         plt.ylabel("y")
         plt.axis('equal')
