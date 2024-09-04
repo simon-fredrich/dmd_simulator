@@ -110,7 +110,12 @@ class Dmd3d:
         self.rot_rad_z = np.deg2rad(-45)
 
         # self.positions=self.compute_positions()
-        
+               
+        # height accross mirror
+        self.on_positions=self.compute_position(0, 0, 1)
+        self.off_positions=self.compute_position(0, 0, -1)
+
+
     def compute_position(self, mi, mj, tilt_state):
         """
         Compute the position of a single mirror in the DMD array.

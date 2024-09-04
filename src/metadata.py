@@ -17,6 +17,22 @@ class MetaData:
         
         self.computing_time=None
 
+    def set_nr_s(self, nr_s):
+        self.nr_s=nr_s
+
+    def set_nr_m(self, nr_m):
+        self.nr_m=nr_m
+        self.update_pattern()
+
+    def set_pixels(self, pixels):
+        self.pixels=pixels
+
+    def set_m_gap(self, m_gap):
+        self.m_gap=m_gap
+
+    def set_tilt_angle_deg(self, tilt_angle_deg):
+        self.tilt_angle_deg=tilt_angle_deg
+
     def update_pattern(self):
         self.pattern=np.ones((self.nr_m, self.nr_m))
 

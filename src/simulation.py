@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.fft import fft2, ifft2, fftshift, ifftshift, fftfreq
 from matplotlib import pyplot as plt
+import matplotlib.ticker as ticker
 from dmd import Dmd2d, Dmd3d
 from metadata import MetaData
 from screen import Screen
@@ -131,7 +132,108 @@ class Simulation3d:
         self.initial_field_on: ComplexField
         self.initial_field_off: ComplexField
 
+        # phase shift accross mirror
+        self.phase_accros_mirror=np.zeros((self.dmd.nr_s, self.dmd.nr_s), dtype=float)
+        self.phase_accros_dmd=np.zeros((self.dmd.nr_m, self.dmd.nr_m), dtype=float)
+
         logging.info(meta.output())
+
+    def compute_phase_accross_mirror(self, si, sj, tilt_state) -> np.ndarray:
+        # x0, y0, z0=self.dmd.grid[0, 0, 0], self.dmd.grid[0, 0, 1], 0
+        x0, y0, z0=0, 0, 0
+        
+        if tilt_state==1:
+            xi, yi, zi=self.dmd.on_positions[0][si, sj], self.dmd.on_positions[1][si, sj], self.dmd.on_positions[2][si, sj]
+        elif tilt_state==0:
+            xi, yi, zi=self.dmd.off_positions[0][si, sj], self.dmd.off_positions[1][si, sj], self.dmd.off_positions[2][si, sj]
+        else:
+            raise ValueError("Tilt state must be 1 or -1.")
+
+        return ( self.k_wave[0] * (xi - x0) + self.k_wave[1] * (yi - y0) + self.k_wave[2] * (zi - z0) )%(2*np.pi)
+
+    def compute_phase_accross_dmd(self, mi, mj) -> np.ndarray:
+        dx=self.dmd.grid[mi, mj, 0]  # distance of x-position of mirror to origin
+        dy=self.dmd.grid[mi, mj, 1]  # distance of y-position of mirror to origin
+        return np.dot(self.k_wave, np.array([dx, dy, 0]))%(2*np.pi)
+    
+    def show_phase_accross_mirror(self, tilt_state) -> None:
+        phase_accross_mirror = np.array([
+            self.compute_phase_accross_mirror(si, sj, tilt_state)
+            for sj in range(self.dmd.nr_s)
+            for si in range(self.dmd.nr_s)
+        ]).reshape(self.dmd.nr_s, self.dmd.nr_s)
+        x_coords=np.linspace(0, self.dmd.m_size, self.dmd.nr_s)
+        y_coords=np.linspace(0, self.dmd.m_size, self.dmd.nr_s)
+        X, Y=np.meshgrid(x_coords, y_coords)
+
+        plt.pcolormesh(X, Y, phase_accross_mirror, shading='auto', cmap='viridis')
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.axis('equal')
+        plt.show()
+
+    def get_dmd_phase(self) -> np.ndarray:
+        # Compute phase shifts for the "on" and "off" states across the mirror
+        on_phase_accross_mirror = np.array([
+            self.compute_phase_accross_mirror(si, sj, 1)
+            for sj in range(self.dmd.nr_s)
+            for si in range(self.dmd.nr_s)
+        ]).reshape(self.dmd.nr_s, self.dmd.nr_s)
+
+        off_phase_accross_mirror = np.array([
+            self.compute_phase_accross_mirror(si, sj, 0)
+            for sj in range(self.dmd.nr_s)
+            for si in range(self.dmd.nr_s)
+        ]).reshape(self.dmd.nr_s, self.dmd.nr_s)
+        tiles=[]
+        for mi in range(self.dmd.nr_m):
+            row_tiles=[]
+            for mj in range(self.dmd.nr_m):
+                if self.pattern[mi, mj]==0:
+                    row_tiles.append(off_phase_accross_mirror+self.compute_phase_accross_dmd(mi, mj))
+                elif self.pattern[mi, mj]==1:
+                    row_tiles.append(on_phase_accross_mirror+self.compute_phase_accross_dmd(mi, mj))
+                else:
+                    return ValueError("pattern values must be 0 ('off') or 1 ('on').")
+            tiles.append(row_tiles)
+        return np.block(tiles)
+
+
+    def show_phase_accross_dmd(self) -> None:
+        dmd_phase=self.get_dmd_phase()
+        x_coords=np.linspace(0, self.dmd.d_size, self.dmd.nr_m*self.dmd.nr_s)
+        y_coords=np.linspace(0, self.dmd.d_size, self.dmd.nr_m*self.dmd.nr_s)
+        X, Y=np.meshgrid(x_coords, y_coords)
+
+        plt.figure(figsize=(12, 12))
+        mesh=plt.pcolormesh(X, Y, dmd_phase%(2*np.pi), shading='auto', cmap='viridis')
+
+        # Add the colorbar
+        cbar = plt.colorbar(mesh)
+
+        # Set the label for the colorbar
+        cbar.set_label("Phasenversatz (radians)")
+
+        # Set the ticks on the colorbar to multiples of pi
+        cbar_ticks = [0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi]
+        cbar.set_ticks(cbar_ticks)
+        
+        # Format the ticks as multiples of pi, correctly showing 3π/2 as '3π/2'
+        cbar.ax.yaxis.set_major_formatter(ticker.FuncFormatter(
+            lambda val, pos: (
+                r"$0$" if val == 0 else
+                r"$\frac{\pi}{2}$" if np.isclose(val, np.pi/2) else
+                r"$\pi$" if np.isclose(val, np.pi) else
+                r"$\frac{3\pi}{2}$" if np.isclose(val, 3*np.pi/2) else
+                r"$2\pi$"
+            )
+        ))
+
+        plt.axis('equal')
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.title("Phasenversatz auf der DMD-Oberfläche")
+        plt.show()
 
     def init_tilt_state_fields(self, screen) -> None:
         configure_logging()  # Ensure logging is configured
@@ -160,7 +262,6 @@ class Simulation3d:
     def compute_field(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
         screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
         total_field=ComplexField(screen)
-
         # Compute initial fields based on pattern/hologram
         self.init_tilt_state_fields(screen)
         total_mirrors = self.dmd.nr_m*self.dmd.nr_m
@@ -188,37 +289,32 @@ class Simulation3d:
 
     def compute_initial_field(self, screen:Screen, mi, mj, tilt_state) -> ComplexField:
         initial_field = ComplexField(screen)
-        source_pos = self.dmd.compute_position(mi, mj, tilt_state)
-        # x0, y0 = self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2]
-        x0, y0, z0=self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1], 0
-        total_points = len(source_pos[0].flatten())
+        point_source_pos = self.dmd.on_positions if tilt_state==1 else self.dmd.off_positions
+        total_points = len(point_source_pos[0].flatten())
+        current_points=0
 
         logging.info(f"Computing initial field for mirror at grid-position ({mi}, {mj}) with tilt state {tilt_state}...")
 
-        for idx, (xi, yi, zi) in enumerate(zip(source_pos[0].flatten(), source_pos[1].flatten(), source_pos[2].flatten())):
-            phase_shift = self.k_wave[0] * (xi - x0) + self.k_wave[1] * (yi - y0) + self.k_wave[2] * (zi - z0)%(2*np.pi)
-            initial_field.phase_shifts[0, idx]=xi
-            initial_field.phase_shifts[1, idx]=yi
-            initial_field.phase_shifts[2, idx]=phase_shift
+        for si in range(self.dmd.nr_s):
+            for sj in range(self.dmd.nr_s):
+                phase_shift=self.compute_phase_accross_mirror(si, sj, tilt_state)
+                r = np.sqrt(np.square(screen.X - self.dmd.on_positions[0][si, sj])+
+                            np.square(screen.Y - self.dmd.on_positions[1][si, sj])+
+                            np.square(screen.Z - self.dmd.on_positions[2][si, sj]))
+                initial_field.add(np.exp(1j * (self.k * r + phase_shift)) / r)
 
-            r = np.sqrt(np.square(screen.X - xi) + np.square(screen.Y - yi) + np.square(screen.Z - zi))
-            initial_field.add(np.exp(1j * (self.k * r + phase_shift)) / r)
+                # Log progress every 10% of completion
+                if (current_points + 1) % (total_points // 10) == 0 or current_points == total_points - 1:
+                    logging.info(f"current_points: {(current_points + 1) / total_points:.0%} complete")
 
-            # Log progress every 10% of completion
-            if (idx + 1) % (total_points // 10) == 0 or idx == total_points - 1:
-                logging.info(f"Progress: {(idx + 1) / total_points:.0%} complete")
+                current_points+=1
 
         logging.info(f"Finished computing initial field for mirror at grid-position ({mi}, {mj}) with tilt state {tilt_state}.\n")
 
         return initial_field
     
     def compute_mirror_contribution(self, mi, mj, initial_field) -> ComplexField:
-        kx=self.k_wave[0]  # projection of wavevector onto x-axis
-        ky=self.k_wave[1]  # projection of wavevector onto y-axis
-        dx=self.dmd.grid[mi, mj, 0]  #- self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2, 0]  # distance of x-position of mirror to origin
-        dy=self.dmd.grid[mi, mj, 1]  #- self.dmd.grid[self.dmd.nr_m//2, self.dmd.nr_m//2, 1]  # distance of y-position of mirror to origin
-        mirror_phase=np.dot(self.k_wave, np.array([dx, dy, 0]))%(2*np.pi)
-
+        mirror_phase=self.compute_phase_accross_dmd(mi, mj)
         phase_shifted_field=initial_field.copy()
         phase_shifted_field.multiply(np.exp(1j*mirror_phase))
 
