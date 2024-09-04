@@ -255,6 +255,57 @@ class Simulation3d:
         plt.title("Phasenversatz auf der DMD-Oberfläche")
         plt.show()
 
+    def show_height_accross_mirror(self, tilt_state) -> None:
+        if tilt_state == 0:
+            Z=self.dmd.off_positions[2]
+        elif tilt_state == 1:
+            Z=self.dmd.on_positions[2]
+        else:
+            raise ValueError("Tilt state must be 0 ('off') or 1 ('on').")
+
+        x_coords=np.linspace(0, self.dmd.m_size, self.dmd.nr_s)
+        y_coords=np.linspace(0, self.dmd.m_size, self.dmd.nr_s)
+        X, Y=np.meshgrid(x_coords, y_coords)
+
+        plt.pcolormesh(X, Y, Z, shading='auto', cmap='viridis')
+        plt.colorbar(label="Height")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.axis('equal')
+        plt.show()
+
+    def get_dmd_height(self) -> np.ndarray:
+        tiles=[]
+        for mi in range(self.dmd.nr_m):
+            row_tiles=[]
+            for mj in range(self.dmd.nr_m):
+                if self.pattern[mi, mj]==0:
+                    row_tiles.append(self.dmd.off_positions[2])
+                elif self.pattern[mi, mj]==1:
+                    row_tiles.append(self.dmd.on_positions[2])
+                else:
+                    return ValueError("pattern values must be 0 ('off') or 1 ('on').")
+            tiles.append(row_tiles)
+        return np.block(tiles)
+
+    def show_height_accross_dmd(self) -> None:
+        dmd_height = self.get_dmd_height()
+        print(type(dmd_height))
+
+
+        # Use the sparse option in np.meshgrid or just use x_coords and y_coords directly
+        x_coords = np.linspace(0, self.dmd.d_size, self.dmd.nr_m * self.dmd.nr_s)
+        y_coords = np.linspace(0, self.dmd.d_size, self.dmd.nr_m * self.dmd.nr_s)
+
+        # Plot the height map
+        plt.figure(figsize=(12, 12))
+        plt.pcolormesh(x_coords, y_coords, dmd_height, shading='auto', cmap='viridis')
+        plt.colorbar(label="Height")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        plt.axis('equal')
+        plt.show()
+
     def init_tilt_state_fields(self, screen) -> None:
         configure_logging()  # Ensure logging is configured
         m_index = self.dmd.nr_m // 2
