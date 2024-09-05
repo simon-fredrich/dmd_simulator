@@ -112,8 +112,8 @@ class Dmd3d:
         # self.positions=self.compute_positions()
                
         # height accross mirror
-        self.on_positions=self.compute_position(0, 0, 1)
-        self.off_positions=self.compute_position(0, 0, -1)
+        self.on_positions=self.compute_position(self.nr_m//2, self.nr_m//2, 1)
+        self.off_positions=self.compute_position(self.nr_m//2, self.nr_m//2, -1)
 
 
     def compute_position(self, mi, mj, tilt_state):
