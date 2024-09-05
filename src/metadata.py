@@ -6,8 +6,8 @@ class MetaData:
         self.tilt_angle_deg=12
         self.m_size=10
         self.m_gap=1
-        self.nr_m=10
-        self.nr_s=50
+        self.nr_m=11
+        self.nr_s=51
         self.pattern=np.ones((self.nr_m, self.nr_m))
         self.wavelength=0.5
         self.pixels=128
