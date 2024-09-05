@@ -120,14 +120,14 @@ class ComplexField:
         plt.show()
         
 
-    def fft(self) -> tuple['ComplexField', np.ndarray, np.ndarray]:
+    def fft(self, coeff=10) -> tuple['ComplexField', np.ndarray, np.ndarray]:
         """
         Perform a 2D Fourier transform on the complex field and return a tuple of:
         - A new ComplexField object containing the Fourier-transformed field.
         - The frequency axes in the x and y directions.
         """
         # Perform the 2D Fourier transform
-        fft_field = fftshift(fft2(self.intensity()))
+        fft_field = fftshift(fft2(self.intensity(), s=[coeff*self.shape[0], coeff*self.shape[1]]))
 
         # Calculate the frequency axes
         # dx = (self.screen.x_max - self.screen.x_min) / self.screen.pixels
