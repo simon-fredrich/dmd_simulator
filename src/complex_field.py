@@ -82,13 +82,43 @@ class ComplexField:
         # self.screen.y_min+=shift_y
         # self.screen.update()
 
-    def display(self) -> None:
-        """ A simple method to visualize the real part of the field."""
-        import matplotlib.pyplot as plt
-        plt.imshow(self.real(), extent=(self.screen.x_min, self.screen.x_max, self.screen.y_min, self.screen.y_max))
-        plt.colorbar()
-        plt.title('Real part of ComplexField')
+    def display(self, plot_type="abs", cmap="viridis") -> None:
+        """Speichert das gegebene Feld als Bilddatei."""
+        if plot_type == 'real':
+            field_to_plot = self.real()
+            title = "Real Part"
+        elif plot_type == 'imag':
+            field_to_plot = self.imag()
+            title = "Imaginary Part"
+        elif plot_type == 'abs':
+            field_to_plot = self.abs()
+            title = "Magnitude"
+        elif plot_type == 'fft':
+            fft, kx, ky = self.fft()
+            title = "FFT Amplitude"
+        elif plot_type == 'inten':
+            field_to_plot = self.intensity()
+            title = "Intensity"
+        else:
+            raise ValueError("Invalid plot_type. Choose 'real', 'imag', 'abs' or 'fft'.")
+
+        plt.figure(figsize=(10, 8))
+        plt.title(f"{title} of Field")
+        if plot_type!="fft":
+            plt.imshow(field_to_plot,
+                    extent=(self.screen.x_min, self.screen.x_max,
+                            self.screen.y_min, self.screen.y_max),
+                    cmap=cmap)
+        elif plot_type=="fft":
+            plt.imshow(fft.abs(),
+                    extent=(np.min(kx), np.max(kx),
+                            np.min(ky), np.max(ky)),
+                    cmap=cmap)
+        plt.colorbar(label=title)
+        plt.xlabel('X')
+        plt.ylabel('Y')
         plt.show()
+        
 
     def fft(self) -> tuple['ComplexField', np.ndarray, np.ndarray]:
         """
@@ -97,11 +127,7 @@ class ComplexField:
         - The frequency axes in the x and y directions.
         """
         # Perform the 2D Fourier transform
-        transformed_mesh = fft2(self.mesh)
-        fft_field = fftshift(fft2(self.mesh))
-
-        # Shift the zero frequency component to the center
-        transformed_mesh = fftshift(transformed_mesh)
+        fft_field = fftshift(fft2(self.intensity()))
 
         # Calculate the frequency axes
         # dx = (self.screen.x_max - self.screen.x_min) / self.screen.pixels
@@ -116,6 +142,6 @@ class ComplexField:
 
         # Create a new ComplexField to hold the transformed field
         transformed_field = ComplexField(self.screen)
-        transformed_field.mesh = transformed_mesh
+        transformed_field.mesh = fft_field
 
         return transformed_field, freq_x, freq_y
