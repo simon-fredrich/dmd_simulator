@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 '''Below is the simulation for 3d mirrors.'''
 
 class Simulation3d:
-    def __init__(self, dmd:Dmd3d, meta:MetaData, if_phase_shift=True) -> None:
+    def __init__(self, dmd:Dmd3d, meta:MetaData) -> None:
         self.dmd = dmd
         self.phase_origin = np.array([-np.sqrt(2)/2*dmd.d_size, 0, 0])
         self.pattern = meta.pattern
