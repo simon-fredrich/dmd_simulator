@@ -270,9 +270,6 @@ class Simulation3d:
                     counter+=1
 
         logging.info("Complete shifting.\n")
-
-        
-
         return total_field
 
     def compute_initial_field(self, screen:Screen, mi, mj, tilt_state) -> ComplexField:
