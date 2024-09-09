@@ -13,7 +13,7 @@ class ComplexField:
         return self.mesh.imag
     
     def real(self):
-        return self.mesh.imag
+        return self.mesh.real
 
     def abs(self) -> np.ndarray:
         return np.abs(self.mesh)
