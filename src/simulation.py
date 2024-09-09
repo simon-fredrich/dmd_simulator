@@ -222,6 +222,14 @@ class Simulation3d:
         plt.axis('equal')
         plt.show()
 
+    def get_incident_field(self, pixels, x_min, x_max, z_min, z_max, y) -> np.ndarray:
+        screen=Screen(pixels, x_min, x_max, z_min, z_max, y)
+        screen.Y, screen.Z=screen.Z, screen.Y
+        field=ComplexField(screen)
+        field.add(np.exp(1j*self.k*(self.k_wave[0]*screen.X+self.k_wave[1]*screen.Y+self.k_wave[2]*screen.Z)))
+        return field
+
+
     def init_tilt_state_fields(self, screen) -> None:
         configure_logging()  # Ensure logging is configured
         m_index = self.dmd.nr_m // 2
