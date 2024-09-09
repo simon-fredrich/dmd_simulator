@@ -33,6 +33,9 @@ class MetaData:
     def set_tilt_angle_deg(self, tilt_angle_deg):
         self.tilt_angle_deg=tilt_angle_deg
 
+    def set_wavelength(self, wavelength):
+        self.wavelength=wavelength
+
     def update_pattern(self):
         self.pattern=np.ones((self.nr_m, self.nr_m))
 
