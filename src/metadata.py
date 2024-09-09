@@ -27,6 +27,9 @@ class MetaData:
     def set_pixels(self, pixels):
         self.pixels=pixels
 
+    def set_m_size(self, m_size):
+        self.m_size=m_size
+
     def set_m_gap(self, m_gap):
         self.m_gap=m_gap
 
