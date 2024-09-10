@@ -109,6 +109,8 @@ class Simulation3d:
         plt.show()
 
     def get_dmd_phase(self) -> np.ndarray:
+        if self.dmd.nr_m>20:
+            ValueError("This function is not supported for more than 20x20 mirrors.")
         # Compute phase shifts for the "on" and "off" states across the mirror
         on_phase_accross_mirror = np.array([
             self.compute_phase_accross_mirror(si, sj, 1)
@@ -136,6 +138,8 @@ class Simulation3d:
 
 
     def show_phase_accross_dmd(self) -> None:
+        if self.dmd.nr_m>20:
+            ValueError("This function is not supported for more than 20x20 mirrors.")
         dmd_phase=self.get_dmd_phase()
         x_coords=np.linspace(0, self.dmd.d_size, self.dmd.nr_m*self.dmd.nr_s)
         y_coords=np.linspace(0, self.dmd.d_size, self.dmd.nr_m*self.dmd.nr_s)
@@ -205,6 +209,8 @@ class Simulation3d:
         return np.block(tiles)
 
     def show_height_accross_dmd(self) -> None:
+        if self.dmd.nr_m>20:
+            ValueError("This function is not supported for more than 20x20 mirrors.")
         dmd_height = self.get_dmd_height()
         print(type(dmd_height))
 
