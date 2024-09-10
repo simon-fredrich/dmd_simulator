@@ -252,7 +252,7 @@ class Simulation3d:
 
             self.initial_field_on, self.initial_field_off=\
                 self.compute_initial_field(screen, m_index, m_index, 1),\
-                self.compute_initial_field(screen, m_index, m_index, -1)
+                self.compute_initial_field(screen, m_index, m_index, 0)
 
     def compute_field(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
         screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
