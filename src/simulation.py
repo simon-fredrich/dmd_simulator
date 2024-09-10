@@ -245,7 +245,7 @@ class Simulation3d:
             self.initial_field_on = self.compute_initial_field(screen, m_index, m_index, 1)
         elif np.all(self.pattern == 0):
             logging.info("Calculate initial field for 'off' state.")
-            self.initial_field_off = self.compute_initial_field(screen, m_index, m_index, 0)
+            self.initial_field_off = ComplexField(screen)
         else:
             logging.info("Calculate initial fields for 'on' & 'off' state.")
 
@@ -258,7 +258,7 @@ class Simulation3d:
 
             self.initial_field_on, self.initial_field_off=\
                 self.compute_initial_field(screen, m_index, m_index, 1),\
-                self.compute_initial_field(screen, m_index, m_index, 0)
+                ComplexField(screen)
 
     def compute_field(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
         if x_min > -self.dmd.nr_m * self.dmd.m_size and \
@@ -277,8 +277,9 @@ class Simulation3d:
         for mi in range(self.dmd.nr_m):
             for mj in range(self.dmd.nr_m):
                 grid_x, grid_y=self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1]
-                mirror_field=self.compute_mirror_contribution(mi, mj, self.initial_field_on) if self.pattern[mi, mj]==1 else\
-                    self.compute_mirror_contribution(mi, mj, self.initial_field_off)
+                if self.pattern[mi, mj]==0:
+                    continue
+                mirror_field=self.compute_mirror_contribution(mi, mj, self.initial_field_on)                    
                 mirror_field.shift(grid_x, grid_y)
                 total_field.mesh+=mirror_field.mesh
 
