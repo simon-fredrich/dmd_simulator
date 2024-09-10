@@ -29,7 +29,7 @@ class Simulation3d:
     def __init__(self, dmd:Dmd3d, meta:MetaData) -> None:
         self.dmd = dmd
         self.phase_origin = np.array([-np.sqrt(2)/2*dmd.d_size, 0, 0])
-        self.pattern = meta.pattern
+        self.pattern = dmd.pattern
 
         # incident wave parameters
         self.k = 2*np.pi/meta.wavelength
