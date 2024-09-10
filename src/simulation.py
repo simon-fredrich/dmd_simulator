@@ -239,7 +239,7 @@ class Simulation3d:
             self.initial_field_on = self.compute_initial_field(screen, m_index, m_index, 1)
         elif np.all(self.pattern == 0):
             logging.info("Calculate initial field for 'off' state.")
-            self.initial_field_off = self.compute_initial_field(screen, m_index, m_index, -1)
+            self.initial_field_off = self.compute_initial_field(screen, m_index, m_index, 0)
         else:
             logging.info("Calculate initial fields for 'on' & 'off' state.")
 
@@ -255,6 +255,11 @@ class Simulation3d:
                 self.compute_initial_field(screen, m_index, m_index, 0)
 
     def compute_field(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
+        if x_min > -self.dmd.nr_m * self.dmd.m_size and \
+            x_max < self.dmd.nr_m * self.dmd.m_size and \
+            y_min > -self.dmd.nr_m * self.dmd.m_size and \
+            y_max < self.dmd.nr_m * self.dmd.m_size:
+            raise ValueError("DMD dimensions must not exceed screen dimensions.")
         screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
         total_field=ComplexField(screen)
         # Compute initial fields based on pattern/hologram
