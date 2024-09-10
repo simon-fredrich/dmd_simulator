@@ -74,7 +74,8 @@ class Hologram():
         mask = amplitude_term * phase_term
             
         mask = (2**nbits-1)*mask
-        return mask.astype(np.uint8)
+        mask = mask.astype(np.uint8)
+        return np.where(mask>0, 1, 0)
 
     def create(self, lambda_x, lambda_y, phase, amplitude):
         """
