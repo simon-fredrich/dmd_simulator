@@ -12,6 +12,8 @@ class Hologram():
         self.X, self.Y=np.ogrid[0:self.nr_m:self.nr_m*1j,\
                                 0:self.nr_m:self.nr_m*1j]
         self.H: np.ndarray
+        self.complex_pattern: np.ndarray
+        self.zernike_coefficients: np.ndarray
 
     def get_disk_mask(self, shape, radius, center = None):
         '''
@@ -35,6 +37,7 @@ class Hologram():
         :center: list of integers, contains the position of the center of the illumination disk
         :center: list of float, the coefficient of the first Zernike polynoms
         '''
+        self.zernike_coefficients=vec
         # Generate a complex phase mask from the coefficients
         zern_mask = np.exp(1j*phaseFromZernikes(vec,2*radius))
         zern_mask/=np.max(np.abs(zern_mask))
@@ -47,7 +50,7 @@ class Hologram():
         mask[center[0]-radius:center[0]+radius, center[1]-radius:center[1]+radius] = zern_mask*amp_mask
         return mask
 
-    def get_lee_holo(self, period, angle=0, nbits = 8):
+    def get_lee_holo(self, period, vec=[0., 0., 5., 5.], angle=0, nbits = 8):
         '''
         complex_pattern: the input amplitude and phase pattern we want to generate.
                         its amplitude should be <= 1
@@ -60,7 +63,8 @@ class Hologram():
         The amplitude is encoded by removing lines orthogonally to the Lee grating.
         '''
         res=[self.nr_m]*2
-        complex_pattern=self.complex_mask_from_zernike_coeff(res, self.nr_m//5, [self.nr_m//2]*2, [0., 0., 0., 1.])
+        complex_pattern=self.complex_mask_from_zernike_coeff(res, self.nr_m//5, [self.nr_m//2]*2, vec)
+        self.complex_pattern=complex_pattern
         angle*=np.pi/180
         assert not np.max(np.abs(complex_pattern)) > 1.
         omega = 2.*np.pi/period
