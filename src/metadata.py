@@ -1,21 +1,15 @@
 import numpy as np
 
 class MetaData:
-    def __init__(self) -> None:
-        # default dmd parameters
-        self.tilt_angle_deg=12
-        self.m_size=10
-        self.m_gap=1
-        self.nr_m=11
-        self.nr_s=51
-        self.pattern=np.ones((self.nr_m, self.nr_m))
-        self.wavelength=0.5
-        self.pixels=128
-
-        # default simulation parameters
-        self.incident_angle_deg=-24
-        
-        self.computing_time=None
+    def __init__(self, tilt_angle_deg, incident_angle_deg, m_size, m_gap, nr_m, nr_s, wavelength, pixels) -> None:
+        self.tilt_angle_deg=tilt_angle_deg
+        self.incident_angle_deg=incident_angle_deg
+        self.m_size=m_size
+        self.m_gap=m_gap
+        self.nr_m=nr_m
+        self.nr_s=nr_s
+        self.wavelength=wavelength
+        self.pixels=pixels
 
     def set_nr_s(self, nr_s):
         self.nr_s=nr_s
