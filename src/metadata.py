@@ -10,6 +10,7 @@ class MetaData:
         self.nr_s=nr_s
         self.wavelength=wavelength
         self.pixels=pixels
+        self.d_size = (m_size+m_gap)*nr_m-m_gap
 
     def set_nr_s(self, nr_s):
         self.nr_s=nr_s
@@ -44,7 +45,6 @@ class MetaData:
             f"Mirror Gap: {self.m_gap}\n"
             f"Number of Mirrors: {self.nr_m}x{self.nr_m}\n"
             f"Number of Sources: {self.nr_s}x{self.nr_s}\n"
-            f"Pattern Shape: {self.pattern.shape}\n"
             f"Wavelength: {self.wavelength}\n"
             f"Pixels: {self.pixels}x{self.pixels}\n"
             f"Incident Angle (deg): {self.incident_angle_deg}\n"
