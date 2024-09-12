@@ -151,10 +151,8 @@ def complex_mask_from_zernike_coeff(shape, radius, center, vec):
     # Generate a complex phase mask from the coefficients
     zern_mask = np.exp(1j*phaseFromZernikes(vec,2*radius))
     zern_mask/=np.max(np.abs(zern_mask))
-    print(np.max(np.abs(zern_mask)))
     # We want the amplitude to be 0 outside the disk, we fist generate a binary disk mask
     amp_mask = get_disk_mask([2*radius]*2,radius)
-    print(np.max(np.abs(amp_mask)))
     # put the Zernik mask at the right position and multiply by the disk mask
     mask = np.zeros(shape = shape, dtype=complex)
     mask[center[0]-radius:center[0]+radius, center[1]-radius:center[1]+radius] = zern_mask*amp_mask
