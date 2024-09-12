@@ -261,10 +261,10 @@ class Simulation3d:
                 ComplexField(screen)
 
     def compute_field(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
-        if x_min > -self.dmd.nr_m * self.dmd.m_size and \
-            x_max < self.dmd.nr_m * self.dmd.m_size and \
-            y_min > -self.dmd.nr_m * self.dmd.m_size and \
-            y_max < self.dmd.nr_m * self.dmd.m_size:
+        if x_min > -np.sqrt(2)/2*self.dmd.d_size and \
+            x_max < np.sqrt(2)/2*self.dmd.d_size and \
+            y_min > -np.sqrt(2)/2*self.dmd.d_size and \
+            y_max < np.sqrt(2)/2*self.dmd.d_size:
             raise ValueError("DMD dimensions must not exceed screen dimensions.")
         screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
         total_field=ComplexField(screen)
