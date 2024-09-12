@@ -61,7 +61,7 @@ class Dmd2d:
 
 
 class Dmd3d:
-    def __init__(self, meta:MetaData) -> None:
+    def __init__(self, meta:MetaData, pattern=None) -> None:
         """
         Initialize a Dmd3d object from a MetaData object.
 
@@ -100,7 +100,10 @@ class Dmd3d:
         self.m_gap = meta.m_gap
         self.d_size = (meta.m_size+meta.m_gap)*meta.nr_m-meta.m_gap
         self.grid = self.create_grid()
-        self.pattern = meta.pattern
+        if pattern is None:
+            self.pattern = np.ones((self.nr_m, self.nr_m))
+        else:
+            self.pattern = pattern
 
         # mirror
         self.X, self.Y, self.Z = self.create_mirror()
