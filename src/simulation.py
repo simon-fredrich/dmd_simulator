@@ -229,10 +229,11 @@ class Simulation3d:
         plt.show()
 
     def get_incident_field(self, pixels, x_min, x_max, z_min, z_max, y) -> np.ndarray:
-        screen=Screen(pixels, x_min, x_max, z_min, z_max, y)
-        screen.Y, screen.Z=screen.Z, screen.Y
+        screen=Screen(pixels=pixels, 
+                      x_min=x_min, x_max=x_max,
+                      z_min=z_min, z_max=z_max, y_value=y)
         field=ComplexField(screen)
-        field.add(np.exp(1j*self.k*(self.k_wave[0]*screen.X+self.k_wave[1]*screen.Y+self.k_wave[2]*screen.Z)))
+        field.add(np.exp(1j*(self.k_wave[0]*screen.X+self.k_wave[1]*screen.Y+self.k_wave[2]*screen.Z)))
         return field
 
 
@@ -266,7 +267,7 @@ class Simulation3d:
             y_min > -np.sqrt(2)/2*self.dmd.d_size and \
             y_max < np.sqrt(2)/2*self.dmd.d_size:
             raise ValueError("DMD dimensions must not exceed screen dimensions.")
-        screen=Screen(pixels, x_min, x_max, y_min, y_max, z)
+        screen=Screen(pixels, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, z_value=z)
         total_field=ComplexField(screen)
         # Compute initial fields based on pattern/hologram
         self.init_tilt_state_fields(screen)
