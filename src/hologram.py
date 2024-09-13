@@ -205,3 +205,42 @@ def zernike_polynomial(n, m, rho, phi):
         return radial_polynomial(n, m, rho) * np.cos(m * phi)
     else:
         return radial_polynomial(n, -m, rho) * np.sin(-m * phi)
+    
+def create_lee_hologram(res, period, angle, phase, amplitude):
+    angle=angle*np.pi/180
+    X,Y = np.meshgrid(np.arange(res[1]),np.arange(res[0]))
+    H=1/2+1/2*np.sign(
+        np.cos(2*np.pi/period*(X*np.cos(angle)+Y*np.sin(angle))+phase)-
+        np.cos(np.arcsin(amplitude)))
+    
+    return H
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    res=(512,512)
+    radius=100
+    center=(res[0]//2,res[1]//2)
+    amplitude=get_disk_mask(shape=res, radius=radius, center=center)
+    phase=np.ones_like(amplitude)
+
+    zern_mask=complex_mask_from_zernike_coeff(res, radius, center, [1, 0, 1, 5])
+    
+    holo=create_lee_hologram(res, period=10, angle=45, phase=np.angle(zern_mask), amplitude=np.abs(zern_mask))
+
+    holo2=get_lee_holo(zern_mask, res, period=10, angle=45, nbits=1)
+
+    fig, ax=plt.subplots(1,2, figsize=(10,5))
+
+    # create a checker to better determine if holos are equal
+    for i in range(res[0]):
+        for j in range(res[1]):
+            if i==j:
+                holo[i, j]=1
+                holo2[i, j]=1
+
+    ax[0].imshow(holo, cmap="viridis")
+    ax[1].imshow(holo2, cmap="viridis")
+
+    plt.show()
