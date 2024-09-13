@@ -75,6 +75,35 @@ class ComplexField:
         # Update the mesh with the shifted version
         self.mesh = shifted_mesh
 
+    def shift_with_roll(self, shift_x: float, shift_y: float) -> None:
+        """
+        Shift the mesh by shift_x in the x direction and shift_y in the y direction.
+        Positive values shift the mesh right/up, negative values shift the mesh left/down.
+        """
+        # Return early if no shift is needed
+        if shift_x == 0 and shift_y == 0:
+            return
+
+        # Convert shift values to pixel values
+        x_abs = np.abs(self.screen.x_max - self.screen.x_min)
+        y_abs = np.abs(self.screen.y_max - self.screen.y_min)
+        pixel_shift_x = int(self.screen.pixels * shift_x / x_abs)
+        pixel_shift_y = int(self.screen.pixels * shift_y / y_abs)
+
+        # Use numpy's roll function to shift the mesh
+        self.mesh = np.roll(self.mesh, shift=(pixel_shift_y, pixel_shift_x), axis=(0, 1))
+
+        # Handle boundary conditions (fill rolled over areas with zeros)
+        if pixel_shift_x > 0:
+            self.mesh[:, :pixel_shift_x] = 0
+        elif pixel_shift_x < 0:
+            self.mesh[:, pixel_shift_x:] = 0
+
+        if pixel_shift_y > 0:
+            self.mesh[:pixel_shift_y, :] = 0
+        elif pixel_shift_y < 0:
+            self.mesh[pixel_shift_y:, :] = 0
+
     def display(self, plot_type="abs", cmap="viridis") -> None:
         """Speichert das gegebene Feld als Bilddatei."""
         if plot_type == 'real':
@@ -138,3 +167,27 @@ class ComplexField:
         transformed_field.mesh = fft_field
 
         return transformed_field, freq_x, freq_y
+    
+
+if __name__ == "__main__":
+    from dmd import Dmd3d
+    from simulation import Simulation3d
+    from metadata import MetaData
+
+    meta=MetaData(tilt_angle_deg=12,
+              incident_angle_deg=-24,
+              m_size=10,
+              m_gap=1,
+              nr_m=512,
+              nr_s=100,
+              wavelength=0.5,
+              pixels=64)
+
+    x_min=-np.sqrt(2)/2*meta.d_size
+    x_max=np.sqrt(2)/2*meta.d_size
+    y_min=-np.sqrt(2)/2*meta.d_size
+    y_max=np.sqrt(2)/2*meta.d_size
+    z=0
+
+    dmd=Dmd3d(meta)
+    sim=Simulation3d(dmd, meta)

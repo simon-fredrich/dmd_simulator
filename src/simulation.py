@@ -292,6 +292,38 @@ class Simulation3d:
 
         logging.info("Complete shifting.\n")
         return total_field
+    
+    def compute_field_with_roll(self, pixels:int, x_min:float, x_max:float, y_min:float, y_max:float, z: float) -> ComplexField:
+        if x_min > -np.sqrt(2)/2*self.dmd.d_size and \
+            x_max < np.sqrt(2)/2*self.dmd.d_size and \
+            y_min > -np.sqrt(2)/2*self.dmd.d_size and \
+            y_max < np.sqrt(2)/2*self.dmd.d_size:
+            raise ValueError("DMD dimensions must not exceed screen dimensions.")
+        screen=Screen(pixels, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, z_value=z)
+        total_field=ComplexField(screen)
+        # Compute initial fields based on pattern/hologram
+        self.init_tilt_state_fields(screen)
+        total_mirrors = self.dmd.nr_m*self.dmd.nr_m
+        counter=0
+        
+        logging.info(f"Shifting initial field over {self.dmd.nr_m}x{self.dmd.nr_m} mirror-grid to construct total field.")
+        for mi in range(self.dmd.nr_m):
+            for mj in range(self.dmd.nr_m):
+                grid_x, grid_y=self.dmd.grid[mi, mj, 0], self.dmd.grid[mi, mj, 1]
+                if self.pattern[mi, mj]==0:
+                    continue
+                mirror_field=self.compute_mirror_contribution(mi, mj, self.initial_field_on)                    
+                mirror_field.shift(grid_x, grid_y)
+                total_field.mesh+=mirror_field.mesh
+
+                # Log progress every 10% of completion
+                if total_mirrors>=10:
+                    if (counter + 1) % (total_mirrors // 10) == 0 or counter == total_mirrors - 1:
+                        logging.info(f"Progress: {(counter + 1) / total_mirrors:.0%} complete")
+                    counter+=1
+
+        logging.info("Complete shifting.\n")
+        return total_field
 
     def compute_initial_field(self, screen:Screen, mi, mj, tilt_state) -> ComplexField:
         initial_field = ComplexField(screen)
