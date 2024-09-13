@@ -75,13 +75,6 @@ class ComplexField:
         # Update the mesh with the shifted version
         self.mesh = shifted_mesh
 
-        # Update the screen dimensions
-        # self.screen.x_max+=shift_x
-        # self.screen.x_min+=shift_x
-        # self.screen.y_max+=shift_y
-        # self.screen.y_min+=shift_y
-        # self.screen.update()
-
     def display(self, plot_type="abs", cmap="viridis") -> None:
         """Speichert das gegebene Feld als Bilddatei."""
         if plot_type == 'real':
