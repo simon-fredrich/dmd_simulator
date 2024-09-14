@@ -5,4 +5,4 @@ src/.ipynb_checkpoints
 .venv
 figures
 data
-simulations/*.*
+simulations/*
